@@ -6,6 +6,7 @@
 import numpy as np
 import pylab as plt
 import pyfits
+from smoothSpec import smooth
 
 #define the location of the data file
 DIR = "../spec/"
@@ -37,3 +38,16 @@ plt.ylim([-50, 100])
 
 #Show the plot
 plt.show()
+
+length = wavelengths.size
+
+der = np.array([])
+waveder = np.array([])
+for ii in range(length-2):
+	der = np.append(der, spec[0][ii+1]-spec[0][ii])
+	waveder = np.append(waveder, (wavelengths[ii+1]+wavelengths[ii])/2.)
+	
+plt.plot(smooth(waveder, 3), smooth(der,3))
+plt.show()
+	
+

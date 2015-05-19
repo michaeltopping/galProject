@@ -1,10 +1,12 @@
 import sys
+import os
 import matplotlib
 import random
 matplotlib.use("Qt5Agg")
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import *
 import pyfits
+import matplotlib.pyplot as plt
 
 import numpy as np
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -13,6 +15,17 @@ from math import *
 from scipy.optimize import curve_fit
 import smoothSpec
 from scipy import interpolate
+
+#constants
+LyA = 1216.
+
+#logfile
+logfile = open("QtDisplaySpec.log", "w")
+
+#define a gaussian to fit to
+def gauss(wavelengths, a, center, sigma):
+	return a*np.exp(-(wavelengths-center)**2/(2*sigma**2))
+
 
 #spectrum class
 class spectrum():
@@ -64,7 +77,7 @@ class spectrum():
 
 		
 		#set limits on the wavelength that we are looking at
-		minWavelength = 4000
+		minWavelength = 3800
 		maxWavelength = 5400
 		minWavelengthIndex = np.where(abs(self.wavelengths-minWavelength) == min(abs(self.wavelengths-minWavelength)))[0]
 		maxWavelengthIndex = np.where(abs(self.wavelengths-maxWavelength) == min(abs(self.wavelengths-maxWavelength)))[0]
@@ -98,6 +111,7 @@ class spectrum():
 	def findRms(self, rmsThresh):
 		#find the rms deviation in the spectra
 		rmsarr = np.array([])
+		self.threshSpec = np.array([])
 		rms = np.std(self.spec - self.smoothSpec)
 		print("RMS error in spectra", 0, "is", rms)
 		#pick out data points that are 5x above the rms value
@@ -118,6 +132,7 @@ class spectrum():
 
 		self.emPeaks = (self.emRedshift+1)*1216.
 		self.absPeaks = (self.absRedshift+1)*np.array([1303.3,1334.5])
+		print("Found peaks at ", self.peaks)
 
 		
 	def removeDupPeaks(self):
@@ -160,7 +175,32 @@ class spectrum():
 		print("Peak added to list")
 		
 		self.peaks = (peakIndices)
-		print("Peaks: ", self.peaks)
+		print("Reduced peaks at peaks: ", self.peaks)
+		
+		
+	def fitLine(self, peak):
+		#how many wavelength points away from center we want to consider
+		subSpecN = 20
+		
+		#create subarrays from center +/- 20 points
+		
+		peak = peak[0]
+		print("Peak in fit: ", peak)
+		subSpectra = self.spec[peak-subSpecN:peak+subSpecN]
+		subWavelengths = self.wavelengths[peak-subSpecN:peak+subSpecN]
+
+		
+		#try to fit to gaussian
+
+		fitParam, fitCov = curve_fit(gauss, subWavelengths-subWavelengths[subSpecN-1], subSpectra)
+		#print out fit data
+		print("A = ", fitParam[0])
+		print("Center = ", fitParam[1]+subWavelengths[subSpecN+1], "Angstroms")
+		print("Sigma = ", fitParam[2])
+
+			
+		return (fitParam[1]+subWavelengths[subSpecN+1])/1216-1
+
 
 
 #define a base canvas class
@@ -237,9 +277,8 @@ class DynamicPlotCanvas(PlotCanvas):
 				self.axes.plot([peak, peak], [minY-10, 0], 'r--', linewidth = 2)
 		
 		#draw threshold spectrum
-		if self.spectrum.threshSpec.size:
-			print(np.shape(self.spectrum.wavelengths), np.shape(self.spectrum.threshSpec))
-			self.axes.plot(self.spectrum.wavelengths, self.spectrum.threshSpec, 'k')
+# 		if self.spectrum.threshSpec.size:
+# 			self.axes.plot(self.spectrum.wavelengths, self.spectrum.threshSpec, 'k')
 
 		#plotting window parameters
 		self.axes.set_xlim([min(self.spectrum.wavelengths), max(self.spectrum.wavelengths)])
@@ -283,7 +322,7 @@ class ApplicationWindow(QMainWindow):
 			self.emRedshifts = np.append(self.emRedshifts, emRedshift)
 			self.absRedshifts = np.append(self.absRedshifts, absRedshift)
 			
-		print(self.emRedshifts, self.absRedshifts)
+		
 		
 		#more application attributes
 		self.file_menu = QMenu('&File', self)
@@ -292,8 +331,10 @@ class ApplicationWindow(QMainWindow):
 		
 		#create the three buttons
 		self.findSpecButton = QPushButton("Find Emission Lines")
+		self.getRedshiftButton = QPushButton("Find z")
 		self.nextSpecButton = QPushButton("Next Spectrum")
 		self.prevSpecButton = QPushButton("Previous Spectrum")	
+		self.getAllZButton = QPushButton("Find All Redshifts")
 		#create the main widget	
 		self.main_widget = QWidget(self)
 		
@@ -301,14 +342,18 @@ class ApplicationWindow(QMainWindow):
 		self.layout = QVBoxLayout(self.main_widget)
 		self.dynamic = DynamicPlotCanvas(str(self.filenames[0]), self.emRedshifts[0], self.absRedshifts[0], self.main_widget, width=10, height=4, dpi = 100)
 		self.layout.addWidget(self.findSpecButton)
+		self.layout.addWidget(self.getRedshiftButton)
+		self.layout.addWidget(self.getAllZButton)
 		self.layout.addWidget(self.nextSpecButton)
 		self.layout.addWidget(self.prevSpecButton)
 		self.layout.addWidget(self.dynamic) #this is the spectrum window
 
 		#connect the buttons so they can be clicked
 		self.findSpecButton.clicked.connect(self.findLines)
+		self.getRedshiftButton.clicked.connect(self.findZ)
 		self.nextSpecButton.clicked.connect(self.nextSpec)
 		self.prevSpecButton.clicked.connect(self.prevSpec)
+		self.getAllZButton.clicked.connect(self.findAllZ)
 		
 		#make the 
 		self.main_widget.setFocus()
@@ -325,16 +370,87 @@ class ApplicationWindow(QMainWindow):
 	#find all the lines and plot them in the plotting window
 	#findRms takes parameters of rms threshold for finding lines
 	def findLines(self):
-		self.dynamic.spectrum.findRms(3)
+		self.dynamic.spectrum.findRms(4)
 		self.dynamic.spectrum.removeDupPeaks()
+		
+	#find the redshift of current spectrum
+	def findZ(self):
+		#if no peaks have been searched for yet
+		if (not self.dynamic.spectrum.peaks.size):
+			self.dynamic.spectrum.findRms(4)
+			self.dynamic.spectrum.removeDupPeaks()
+
+		#if there are any peaks to be found
+		if self.dynamic.spectrum.peaks.size:
+			#get some local variables for data
+			wavelengths = self.dynamic.spectrum.wavelengths
+			spec = self.dynamic.spectrum.spec
+			peaks = np.array(self.dynamic.spectrum.peaks)
+			#if there are more than one peak, only look at the highest one
+			highestPeak = np.where(spec == np.max(spec[peaks.astype(int)]))
+			#fit the peak to a gaussian, return the center
+			peakfit = self.dynamic.spectrum.fitLine(highestPeak)
+			print(peakfit)
+
+			
+	#find redshifts of all spectra
+	def findAllZ(self):
+		#empty array that will hold the redshifts
+		zs = np.array([])
+		#loop through each file
+		for file in range(len(self.filenames)):
+			#create a local spectrum object for each file
+			spec = spectrum(self.filenames[file], self.emRedshifts[file], self.absRedshifts[file])
+			#find all peaks in the file
+			spec.findRms(4)
+			spec.removeDupPeaks()
+			
+			#define local data
+			wavelengths = spec.wavelengths
+			data = spec.spec
+			peaks = np.array(spec.peaks)
+			
+			#if there are any peaks in the spectrum
+			if peaks.size:
+				#pick the highest peak
+				highestPeak = np.where(data == np.max(data[peaks.astype(int)]))
+				#fit the peak to a gaussian and return the center
+				peakfit = spec.fitLine(highestPeak)
+				print(peakfit)
+				zs = np.append(zs, peakfit)
+				logfile.write(str(file)+ "	"+ self.filenames[file]+"	z=" +str(peakfit)+ '\n')
+			#if no peaks were found, use estimation from emission lines
+			elif self.emRedshifts[file] > 0:
+				try:
+					#same fitting technique as before
+					emRedshiftIndex = np.argmin(np.abs(wavelengths -(self.emRedshifts[file]+1)*LyA))
+					peakfit = spec.fitLine([emRedshiftIndex])
+					zs = np.append(zs, peakfit)
+					logfile.write(str(file)+ "	"+ self.filenames[file]+"	z=" +str(peakfit)+ '\n')
+
+				except RuntimeError:
+					print("Unable to fit Gaussian")
+					logfile.write(str(file) +"	"+ self.filenames[file]+ "	Unable to fit Gaussian"+ '\n')
+			
+		print("Got ", zs.size, " Redshifts: ",zs)
+		#plot histogram
+		plt.hist(zs)
+		plt.show()
+			
+
+			
+		
 		
 	#display the previous spectrum in the list
 	def prevSpec(self):
 		if self.specNum > 0:
 			self.specNum -= 1
+			#remove the current object
 			self.layout.removeWidget(self.dynamic)
+			#delete widget, free up memory
 			self.dynamic.deleteLater()
 			self.dynamic = None
+			#create new spectrum pass
 			self.dynamic = DynamicPlotCanvas(str(self.filenames[self.specNum]), self.emRedshifts[self.specNum], self.absRedshifts[self.specNum], self.main_widget, width=10, height=4, dpi = 100)
 			self.layout.addWidget(self.dynamic)
 		else:
@@ -343,6 +459,7 @@ class ApplicationWindow(QMainWindow):
 	#display the next spectrum in the list
 	def nextSpec(self):
 		self.specNum += 1
+		#same as "prevSpec()" ^
 		self.layout.removeWidget(self.dynamic)
 		self.dynamic.deleteLater()
 		self.dynamic = None
@@ -358,3 +475,4 @@ if __name__ == '__main__':
 	aw.show()
 	
 	app.exec_()
+	logfile.close()
