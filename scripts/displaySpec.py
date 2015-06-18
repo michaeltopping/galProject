@@ -53,7 +53,9 @@ W = np.array([1.63, 2.2, 1.72, 1.83, 0.81, 1.72, 3.03])
 f = np.array([1.007, 0.04887, .1278, .5140, .2553, .130, .1])
 Nzs = 1000
 zguess = 3.091
-zs = np.linspace(zguess*0.998,zguess*1.002, Nzs)
+#zs = np.linspace(zguess*0.998,zguess*1.002, Nzs)
+zs = np.linspace(zguess*0.75,zguess*1.25, Nzs)
+
 lambdaMin = 3100.
 dlambda = 1.43
 integrals = np.array([])

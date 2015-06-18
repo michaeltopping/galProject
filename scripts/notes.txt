@@ -1,7 +1,7 @@
 - Ways of detecting lines -
 # nope #take derivative spectrum, smooth it, then search for lines -- Probably won't work
 # no #apply some sort of filtering
-find jumps in cumulative spectrum
+# no #find jumps in cumulative spectrum
 
 
 - Questions -
@@ -15,10 +15,15 @@ What causes the offsets in NB vs. R images?
 
 - TODO -
 Want to create a file browsing system to allow selecting from multiple places
-Calculate redshifts from absorption
+# done #Calculate redshifts from absorption
 	fit each absorption line separately and average the redshifts
 	cross correlate a list of absorption lines near a guess redshift
-	# did not work/unnecessary #Monte Carlo subtract noise, then cross correlate with metal lines
-Check if the continuum is equal on both sides of the LyA line
+	# did not work/unnecessary # Monte Carlo subtract noise, then cross correlate with metal lines
+# done # Check if the continuum is equal on both sides of the LyA line
 # done # Make sure you're checking the correct aperture
 Check for double peaked behavior
+# done # Add fit to a continuum
+# done # Make sure emission fitting is not fitting absorption lines
+# done # Also fit absorption lines
+# done # For duplicate objects, fit both and average redshifts?
+# done # Make guesses for other two datasets.
