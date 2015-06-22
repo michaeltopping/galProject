@@ -309,10 +309,10 @@ class ApplicationWindow(QMainWindow):
 						if ('lae' in dataset.filenames[file]):
 							laezs = np.append(laezs, peakfit)
 						logfile.write(str(file)+ "	"+ dataset.filenames[file]+"	z=" +str(peakfit)+ '\n')
-						absz = spec.fitAbsLine(highestPeak, plotBool)
-						abszs = np.append(abszs, absz)
+						#absz = spec.fitAbsLine(highestPeak, plotBool)
+						#abszs = np.append(abszs, absz)
 						dataset.galaxies[dataset.objects[file]].addRedshift("em", peakfit)
-						dataset.galaxies[dataset.objects[file]].addRedshift("abs", absz)
+						#dataset.galaxies[dataset.objects[file]].addRedshift("abs", absz)
 					except:
 						print("Error finding peak")
 				#if no peaks were found, use estimation from emission lines
@@ -328,15 +328,13 @@ class ApplicationWindow(QMainWindow):
 						if ('lae' in dataset.filenames[file]):
 							laezs = np.append(laezs, peakfit)
 						logfile.write(str(file)+ "	"+ dataset.filenames[file]+"	z=" +str(peakfit)+ '\n')
-						absz = spec.fitAbsLine([emRedshiftIndex], plotBool)
-						abszs = np.append(abszs, absz)
+
 						dataset.galaxies[dataset.objects[file]].addRedshift("em", peakfit)
-						dataset.galaxies[dataset.objects[file]].addRedshift("abs", absz)
 
 					except RuntimeError:
 						print("Unable to fit Gaussian")
 						logfile.write(str(file) +"	"+ dataset.filenames[file]+ "	Unable to fit Gaussian"+ '\n')
-				elif dataset.guessabsRedshifts[file] > 0:
+				if dataset.guessabsRedshifts[file] > 0:
 # 						try:
 					print("Calculating absorption redshift")
 					nabszs += 1
@@ -351,9 +349,11 @@ class ApplicationWindow(QMainWindow):
 							lineSpec += gaussian
 						multSpec = (spec.spec)*lineSpec
 						integrals = np.append(integrals, np.trapz(wavelengths, multSpec))
+					
 					abszs = np.append(abszs, zlist[integrals.argmax()])
 					logfile.write(str(file)+ "	"+ dataset.filenames[file]+" abs	z=" +str(zlist[integrals.argmax()])+ '\n')
-					
+					dataset.galaxies[dataset.objects[file]].addRedshift("abs", zlist[integrals.argmax()])
+
 						# except:
 # 							print("Unable to fit Gaussian")
 # 							logfile.write(str(file) +"	"+ dataset.filenames[file]+ "	Unable to calculate absorption redshift"+ '\n')

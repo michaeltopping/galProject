@@ -10,10 +10,47 @@ from smoothSpec import smooth
 from scipy import interpolate
 import random
 
+def isDoublePeaked(wavelengths, spec, LyAguess):
+	dspec = np.array([])
+	dlambda = np.array([])
+
+	#set limits on the wavelength that we are looking at
+	minWavelength = LyAguess-30
+	maxWavelength = LyAguess+30
+	minWavelengthIndex = np.where(abs(wavelengths-minWavelength) == min(abs(wavelengths-minWavelength)))[0][0]
+	maxWavelengthIndex = np.where(abs(wavelengths-maxWavelength) == min(abs(wavelengths-maxWavelength)))[0][0]
+
+
+	peakWavelengths = wavelengths[minWavelengthIndex:maxWavelengthIndex]
+	peakSpec = spec[minWavelengthIndex:maxWavelengthIndex]	
+	peakSpec = peakSpec/max(peakSpec)
+	for ii in range(len(peakWavelengths)-1):
+		dspec = np.append(dspec, peakSpec[ii+1]-peakSpec[ii])
+		dlambda = np.append(dlambda, (peakWavelengths[ii+1]+peakWavelengths[ii])/2.)
+	negs=[]
+	for jj in range(len(dspec)):
+		if dspec[jj]<0:
+			negs.append(jj)
+
+	pos = [x+1 for x in list(set(range(len(spec)-1))-set(negs))]
+	peaks = list(set(pos) & set(negs))
+
+
+	print peaks
+
+
+	print "Npeaks: ", len(list(np.where(peakSpec[peaks]>0.5)[0]))
+	for peak in list(np.where(peakSpec[peaks]>0.5)[0]):
+		print wavelengths[np.where(wavelengths == peakWavelengths[peak])[0]][0], peakWavelengths[peak]
+		
+
+	return list(np.where(spec[peaks]>0.5)[0])
+	
+
 
 #define the location of the data file
-DIR = "../spec/"
-filename = "ssaly_1.b.M25.msdc_v.fits"
+DIR = "../shapley2006_spec/"
+filename = "ssa22.D17.br.fits"
 
 #Read in data into spec, and header data into header
 print "Reading in data from "+DIR+filename
@@ -94,23 +131,28 @@ totints = np.zeros(Nzs)
 # 	print "Finished calculating number ", jj
 	
 # plt.plot(wavelengths, totspec/(N+1))
-# plt.plot(wavelengths, spec)
-# plt.show()
 
-integrals = np.array([])
-for z in zs:
-	lineSpec = np.zeros(np.shape(spec)[0])
-	for kk in range(lines.size):
-		line = ((z+1)*lines[kk])
-		gaussian = f[kk]*np.exp(-((wavelengths - line)**2)/(2*W[kk]**2))
-		lineSpec += gaussian
-	multSpec = (spec)*lineSpec
-	integrals = np.append(integrals, np.trapz(wavelengths, multSpec))
+bool = isDoublePeaked(wavelengths, spec, 4973.)
+print bool
 
-#plt.plot(zs, totints/N)
-print "Redshift: ", zs[integrals.argmax()]
-plt.plot(zs, integrals)
+plt.plot(wavelengths, spec/max(spec))
+plt.xlim([4500,5500])
 plt.show()
+# 
+# integrals = np.array([])
+# for z in zs:
+# 	lineSpec = np.zeros(np.shape(spec)[0])
+# 	for kk in range(lines.size):
+# 		line = ((z+1)*lines[kk])
+# 		gaussian = f[kk]*np.exp(-((wavelengths - line)**2)/(2*W[kk]**2))
+# 		lineSpec += gaussian
+# 	multSpec = (spec)*lineSpec
+# 	integrals = np.append(integrals, np.trapz(wavelengths, multSpec))
+# 
+# #plt.plot(zs, totints/N)
+# print "Redshift: ", zs[integrals.argmax()]
+# plt.plot(zs, integrals)
+# plt.show()
 
 #plt.plot(zs, totints/N-integrals)
 #plt.show()

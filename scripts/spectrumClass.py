@@ -114,6 +114,51 @@ class spectrum():
 		
 		self.getSmoothedSpectrum(51)
 
+	#LyAguess is in angstroms
+	def isDoublePeaked(self, wavelengths, spec, LyAguess):
+		dspec = np.array([])
+		dlambda = np.array([])
+
+		#set limits on the wavelength that we are looking at
+		minWavelength = LyAguess-10
+		maxWavelength = LyAguess+10
+		minWavelengthIndex = np.where(abs(wavelengths-minWavelength) == min(abs(wavelengths-minWavelength)))[0][0]
+		maxWavelengthIndex = np.where(abs(wavelengths-maxWavelength) == min(abs(wavelengths-maxWavelength)))[0][0]
+
+	
+		peakWavelengths = wavelengths[minWavelengthIndex:maxWavelengthIndex]
+		peakSpec = spec[minWavelengthIndex:maxWavelengthIndex]	
+		peakSpec = peakSpec/max(peakSpec)
+		for ii in range(len(peakWavelengths)-1):
+			dspec = np.append(dspec, peakSpec[ii+1]-peakSpec[ii])
+			dlambda = np.append(dlambda, (peakWavelengths[ii+1]+peakWavelengths[ii])/2.)
+		negs=[]
+		for jj in range(len(dspec)):
+			if dspec[jj]<0:
+				negs.append(jj)
+
+		pos = [x+1 for x in list(set(range(len(spec)-1))-set(negs))]
+		peaks = list(set(pos) & set(negs))
+	
+
+		
+
+
+		print("Npeaks: ", len(list(np.where(peakSpec[peaks]>0.8)[0])))
+		print("Calculated peaks at: ", peakWavelengths[peaks])
+		LyApeaks = []
+		for peak in list(np.where(peakSpec[peaks]>0.8)[0]):
+			peak = peaks[peak]
+			print("Trying ", peakWavelengths[peak])
+			print("Found peaks at: ", wavelengths[np.where(wavelengths == peakWavelengths[peak])[0][0]])
+			LyApeaks.append(np.where(wavelengths == peakWavelengths[peak])[0][0])
+		print("Done finding peaks --------------")
+		return LyApeaks
+# 		if len(list(np.where(spec[peaks]>0.5)[0])) == 2:
+# 			return True
+# 		else:
+# 			return False
+
 
 	def getSmoothedSpectrum(self, smoothFac):
 		#get a smoothed spectrum
@@ -215,6 +260,23 @@ class spectrum():
 		plotSpectra = self.spec[peak-3*subSpecN:peak+3*subSpecN]
 		plotWavelengths = self.wavelengths[peak-3*subSpecN:peak+3*subSpecN]
 
+
+
+
+
+		doublePeaks = self.isDoublePeaked(self.wavelengths, self.spec, self.wavelengths[peak])
+		if len(doublePeaks) == 2:
+			doublePeaked = True
+		else:
+			doublePeaked = False
+			
+		print("Peaks in LyA: ", doublePeaks)
+		print("Corresponds to: ", self.wavelengths[doublePeaks])
+
+		if doublePeaked:
+			trough = self.spec[min(doublePeaks):max(doublePeaks)].argmin()+min(doublePeaks)
+			
+
 		#try to fit to gaussian
 		#first, check to see if the line is close to the edge
 		if (peak > subSpecN):
@@ -241,8 +303,9 @@ class spectrum():
 					plt.savefig("./images/"+self.filename[0:-5]+"/fullspec.png")
 					plt.cla()
 					plt.plot(subWavelengths, subSpectra/maxSpec, linewidth=2)
-					plt.plot(subWavelengths, (subWavelengths-subWavelengths[subSpecN-1])*fitParam[4]+fitParam[3]+fitParam[0]*np.exp(-(subWavelengths-(fitParam[1]+subWavelengths[subSpecN-1]))**2/(2*fitParam[2]**2)), linewidth=2, label="z=%.3f" % z)
+					plt.plot(subWavelengths, (subWavelengths-subWavelengths[subSpecN-1])*fitParam[4]+fitParam[3]+fitParam[0]*np.exp(-(subWavelengths-(fitParam[1]+subWavelengths[subSpecN-1]))**2/(2*fitParam[2]**2)), linewidth=2, label="z=%.3f" % z+"d"*doublePeaked)
 					plt.legend()
+					
 					plt.savefig("./images/"+self.filename[0:-5]+"/linespec.png")
 				
 					if not(os.path.isdir("./images/all/")):
@@ -252,15 +315,22 @@ class spectrum():
 					plt.savefig("./images/all/"+str(z)+"_"+self.filename[0:-5]+"_fullspec.png")
 					plt.cla()
 					plt.plot(subWavelengths, subSpectra/maxSpec, linewidth=2)
-					plt.plot(subWavelengths, (subWavelengths-subWavelengths[subSpecN-1])*fitParam[4]+fitParam[3]+fitParam[0]*np.exp(-(subWavelengths-(fitParam[1]+subWavelengths[subSpecN-1]))**2/(2*fitParam[2]**2)), linewidth=2, label="z=%.3f" % z)
+					plt.plot(subWavelengths, (subWavelengths-subWavelengths[subSpecN-1])*fitParam[4]+fitParam[3]+fitParam[0]*np.exp(-(subWavelengths-(fitParam[1]+subWavelengths[subSpecN-1]))**2/(2*fitParam[2]**2)), linewidth=2, label="z=%.3f" % z+"d"*doublePeaked)
+					plt.plot(subWavelengths, (subWavelengths-subWavelengths[subSpecN-1])*fitParam[4]+fitParam[3]+fitParam[0]*np.exp(-(subWavelengths-(fitParam[1]+subWavelengths[subSpecN-1]))**2/(2*fitParam[2]**2)) - subSpectra/maxSpec, 'r')
+					if doublePeaked:
+						plt.plot([self.wavelengths[trough], self.wavelengths[trough]], [0,1], 'k')
 					plt.legend()
-					plt.savefig("./images/all/"+str(z)+"_"+self.filename[0:-5]+"_linespec.png")
+					if doublePeaked:
+						plt.plot(self.wavelengths[doublePeaks], self.spec[doublePeaks]/max(subSpectra), 'ko')
+					plt.savefig("./images/all/"+str(z)+"d"*doublePeaked+"_"+self.filename[0:-5]+"_linespec.png")
 				
-
-			if fitParam[0]<0:
-				return -1*(fitParam[1]+subWavelengths[subSpecN-1])/LyA+1
-			elif fitParam[0]>0:
-				return (fitParam[1]+subWavelengths[subSpecN-1])/LyA-1
+			if not doublePeaked:
+				if fitParam[0]<0:
+					return -1*(fitParam[1]+subWavelengths[subSpecN-1])/LyA+1
+				elif fitParam[0]>0:
+					return (fitParam[1]+subWavelengths[subSpecN-1])/LyA-1
+			else:
+				return self.wavelengths[trough]/LyA - 1
 
 			
 		else:
@@ -312,5 +382,9 @@ class spectrum():
 			
 			
 		return absZ
+
+
+
+
 
 
