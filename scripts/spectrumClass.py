@@ -29,7 +29,7 @@ def gauss(wavelengths, a, center, sigma, b, c):
 #   filename - filename of spectrum file
 #   emRedshift - guess for the redshift based on emission features
 #   absRedshift - guess of the redshift based on absorption features
-#   
+#
 class spectrum():
 	def __init__(self, loc,  filename, emRedshift, absRedshift, aperture):
 		self.emRedshift = emRedshift
@@ -43,7 +43,7 @@ class spectrum():
 		self.emPeaks = np.array([])
 		self.absPeaks = np.array([])
 		self.threshSpec = np.array([])
-		
+
 		#Read in data into spec, and header data into header
 		print("Reading in data from "+filename)
 		self.spec, header = pyfits.getdata(loc+filename, 0, header=True)
@@ -60,13 +60,13 @@ class spectrum():
 		print("Nspectra: ", nSpectra)
 		print("Read in", nSpectra, "spectra.")
 		print("Shape of spectra: ", np.shape(self.spec))
-		
+
 		self.spec[np.where(self.spec > 1000)] = 0
 		self.spec[np.where(self.spec < -1000)] = 0
-	
 
-		
-		
+
+
+
 		#Read in and split up wavelength solution information in the 'WAT2_002' fits header
 		try:
 			lambdaMin = float(header['CRVAL1'])
@@ -83,11 +83,11 @@ class spectrum():
 					if (float(header['WAT2_002'].split()[index]) > 2000.0):
 						foundMin = True
 						print("Min Wavelength is: ", float(header['WAT2_002'].split()[index]))
-					
+
 				except:
 					pass
-					
-		
+
+
 			lambdaMin = float(header['WAT2_002'].split()[index])
 			dlambda = float(header['WAT2_002'].split()[index+1])
 			Nlambda = np.shape(self.spec)[0]
@@ -100,7 +100,7 @@ class spectrum():
 		self.fullspec = self.spec
 		self.fullwavelengths = self.wavelengths
 
-		
+
 		#set limits on the wavelength that we are looking at
 		minWavelength = 4500
 		maxWavelength = 5300
@@ -111,7 +111,7 @@ class spectrum():
 		self.wavelengths = self.wavelengths[minWavelengthIndex:maxWavelengthIndex]
 		self.spec = self.spec[minWavelengthIndex:maxWavelengthIndex]
 
-		
+
 		self.getSmoothedSpectrum(51)
 
 	#LyAguess is in angstroms
@@ -125,9 +125,9 @@ class spectrum():
 		minWavelengthIndex = np.where(abs(wavelengths-minWavelength) == min(abs(wavelengths-minWavelength)))[0][0]
 		maxWavelengthIndex = np.where(abs(wavelengths-maxWavelength) == min(abs(wavelengths-maxWavelength)))[0][0]
 
-	
+
 		peakWavelengths = wavelengths[minWavelengthIndex:maxWavelengthIndex]
-		peakSpec = spec[minWavelengthIndex:maxWavelengthIndex]	
+		peakSpec = spec[minWavelengthIndex:maxWavelengthIndex]
 		peakSpec = peakSpec/max(peakSpec)
 		for ii in range(len(peakWavelengths)-1):
 			dspec = np.append(dspec, peakSpec[ii+1]-peakSpec[ii])
@@ -139,9 +139,9 @@ class spectrum():
 
 		pos = [x+1 for x in list(set(range(len(spec)-1))-set(negs))]
 		peaks = list(set(pos) & set(negs))
-	
 
-		
+
+
 
 
 		print("Npeaks: ", len(list(np.where(peakSpec[peaks]>0.8)[0])))
@@ -162,7 +162,7 @@ class spectrum():
 
 	def getSmoothedSpectrum(self, smoothFac):
 		#get a smoothed spectrum
-		
+
 		interp = interpolate.splrep(smoothSpec.smooth(self.wavelengths, smoothFac), smoothSpec.smooth(self.spec, smoothFac))
 		lambdaNew = np.linspace(min(self.wavelengths), max(self.wavelengths), len(self.spec))
 		self.smoothSpec = interpolate.splev(lambdaNew, interp, der=0)
@@ -175,7 +175,7 @@ class spectrum():
 		#remove this boundary from the spectrum
 		maskSize = 30
 		for index in np.arange(dichroIndex-maskSize,dichroIndex+maskSize, 1):
-			self.spec[index] = (self.spec[dichroIndex]+self.spec[dichroIndex+2*maskSize])/2.	
+			self.spec[index] = (self.spec[dichroIndex]+self.spec[dichroIndex+2*maskSize])/2.
 
 
 	def findRms(self, rmsThresh):
@@ -204,7 +204,7 @@ class spectrum():
 		self.absPeaks = (self.absRedshift+1)*np.array([1303.3,1334.5])
 		print("Found peaks at ", self.peaks)
 
-		
+
 	def removeDupPeaks(self):
 		lastpeak = 0
 		nInPeak = 0
@@ -235,7 +235,7 @@ class spectrum():
 				print("Now on peak number ", jj)
 				nInPeak = 0
 				print("Added peak: ", int((self.peaks[jj-1]+self.peaks[jj-1-nInPeak])/2))
-	
+
 		#required to add the last line to the list of centers
 		print("Adding last peak to list after", nInPeak, " peaks")
 		if jj != 0:
@@ -243,15 +243,16 @@ class spectrum():
 		else:
 			print("No peaks to add to list")
 		#print("Peak added to list", int((self.peaks[jj]+self.peaks[jj-nInPeak])/2))
-		
+
 		self.peaks = (peakIndices)
 		print("Reduced peaks at peaks: ", self.peaks)
-		
-		
+
+
 	def fitLine(self, peak, plotBool, subSpecN):
 		#how many wavelength points away from center we want to consider
 		#subSpecN = 15
 		#create subarrays from center +/- subSpecN points
+
 		
 		peak = peak[0]
 		print("Peak in fit: ", peak)
@@ -269,13 +270,13 @@ class spectrum():
 			doublePeaked = True
 		else:
 			doublePeaked = False
-			
+
 		print("Peaks in LyA: ", doublePeaks)
 		print("Corresponds to: ", self.wavelengths[doublePeaks])
 
 		if doublePeaked:
 			trough = self.spec[min(doublePeaks):max(doublePeaks)].argmin()+min(doublePeaks)
-			
+
 
 		#try to fit to gaussian
 		#first, check to see if the line is close to the edge
@@ -290,7 +291,7 @@ class spectrum():
 			print("Continuum = ", fitParam[3])
 			print("Continuum slope = ", fitParam[4])
 			z = (fitParam[1]+subWavelengths[subSpecN-1])/LyA - 1
-			
+
 			#create a plot of each spectrum and the fitted line.
 			if (plotBool):
 				print("Checking to see if directory exists")
@@ -305,9 +306,9 @@ class spectrum():
 					plt.plot(subWavelengths, subSpectra/maxSpec, linewidth=2)
 					plt.plot(subWavelengths, (subWavelengths-subWavelengths[subSpecN-1])*fitParam[4]+fitParam[3]+fitParam[0]*np.exp(-(subWavelengths-(fitParam[1]+subWavelengths[subSpecN-1]))**2/(2*fitParam[2]**2)), linewidth=2, label="z=%.3f" % z+"d"*doublePeaked)
 					plt.legend()
-					
+
 					plt.savefig("./images/"+self.filename[0:-5]+"/linespec.png")
-				
+
 					if not(os.path.isdir("./images/all/")):
 						os.makedirs("./images/all/")
 					plt.cla()
@@ -323,7 +324,7 @@ class spectrum():
 					if doublePeaked:
 						plt.plot(self.wavelengths[doublePeaks], self.spec[doublePeaks]/max(subSpectra), 'ko')
 					plt.savefig("./images/all/"+str(z)+"d"*doublePeaked+"_"+self.filename[0:-5]+"_linespec.png")
-				
+
 			if not doublePeaked:
 				if fitParam[0]<0:
 					return -1*(fitParam[1]+subWavelengths[subSpecN-1])/LyA+1
@@ -332,10 +333,10 @@ class spectrum():
 			else:
 				return self.wavelengths[trough]/LyA - 1
 
-			
+
 		else:
 			return -2
-	
+
 	def fitAbsLine(self, peak, plotBool):
 		print("Calculating absorption redshift")
 		zguess = self.wavelengths[peak[0]]/LyA-1
@@ -354,22 +355,22 @@ class spectrum():
 				lineSpec += gaussian
 			multSpec = (self.fullspec)*lineSpec
 			integrals = np.append(integrals, np.trapz(self.fullwavelengths, multSpec))
-			
+
 		absZ = zlist[integrals.argmax()]
-			
-			
+
+
 		if (plotBool):
 			print("Checking to see if directory exists")
 			if not(os.path.isdir("./images/"+self.filename[0:-5])):
 				os.makedirs("./images/"+self.filename[0:-5])
 				print("Created directory")
-			
+
 			plt.cla()
 			plt.plot(self.fullwavelengths, self.fullspec)
 			for peak in lines*(absZ+1):
 				plt.plot([peak, peak], [min(self.fullspec)-10, 0], 'r--', linewidth = 2)
 			plt.savefig("./images/"+self.filename[0:-5]+"/absorbspec.png")
-			
+
 			if not(os.path.isdir("./images/all/absorption/")):
 				os.makedirs("./images/all/absorption/")
 			plt.cla()
@@ -378,13 +379,7 @@ class spectrum():
 				plt.plot([peak, peak], [min(self.fullspec)-10, 0], 'r--', linewidth = 2)
 			plt.savefig("./images/all/absorption/"+str(absZ)+"_"+self.filename[0:-5]+"_absorbspec.png")
 
-			
-			
-			
+
+
+
 		return absZ
-
-
-
-
-
-

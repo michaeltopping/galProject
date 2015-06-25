@@ -19,6 +19,9 @@ from scipy import interpolate
 from datasetClass import dataset
 from spectrumClass import spectrum
 
+
+
+
 #constants
 LyA = 1215.67
 
@@ -35,21 +38,20 @@ class PlotCanvas(FigureCanvas):
 	def __init__(self, parent=None, width=5, height=4, dpi = 100):
 		fig = Figure(figsize=(width, height), dpi = dpi)
 		self.axes = fig.add_subplot(111)
-		
-		
+
+
 		FigureCanvas.__init__(self, fig)
 		self.setParent(parent)
-		
+
 		FigureCanvas.setSizePolicy(self, QSizePolicy.Expanding, QSizePolicy.Expanding)
 		FigureCanvas.updateGeometry(self)
-	
+
 	#for inheritance purposes
 	def compute_initial_figure(self):
 		pass
-		
-		
 
-		
+
+
 
 # #define a dynamic canvas class
 class DynamicPlotCanvas(PlotCanvas):
@@ -58,28 +60,28 @@ class DynamicPlotCanvas(PlotCanvas):
 		#self.filename = filename
 		#print(self.filename)
 		PlotCanvas.__init__(self, *args, **kwargs)
-		
+
 		#create a clock that will refresh the plot every frame
 		timer = QtCore.QTimer(self)
 		timer.timeout.connect(self.update_figure)
 		timer.start(50)
-		
+
 		#initialize variables
 		self.spectrum = spectrum #create the spectrum object
 
 
-		
+
 	#update the figure, this is called efery frame
 	def update_figure(self):
 
 		#clear the plot
 		self.axes.cla()
-		
+
 		#draw the spectrum
 		self.axes.plot(self.spectrum.wavelengths, self.spectrum.spec, linewidth=1)
 		minY = min(self.spectrum.spec)
 		maxY = max(self.spectrum.spec)
-		
+
 
 		#if there are peaks listed in the peaks list, draw them
 		if self.spectrum.peaks.size:
@@ -91,10 +93,6 @@ class DynamicPlotCanvas(PlotCanvas):
 		if self.spectrum.absPeaks.size:
 			for peak in self.spectrum.absPeaks:
 				self.axes.plot([peak, peak], [minY-10, 0], 'r--', linewidth = 2)
-		
-		#draw threshold spectrum
-# 		if self.spectrum.threshSpec.size:
-# 			self.axes.plot(self.spectrum.wavelengths, self.spectrum.threshSpec, 'k')
 
 		#plotting window parameters
 		self.axes.set_xlim([min(self.spectrum.wavelengths), max(self.spectrum.wavelengths)])
@@ -103,11 +101,8 @@ class DynamicPlotCanvas(PlotCanvas):
 		self.axes.set_ylim([minY, maxY])
 		#draw the figure
 		self.draw()
-		
 
-		
-		
-		
+
 #build the application window class
 class ApplicationWindow(QMainWindow):
 	def __init__(self):
@@ -116,10 +111,10 @@ class ApplicationWindow(QMainWindow):
 		self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 		self.setWindowTitle("Line Finder")
 		self.dataSetNum = 0
-		
+
 		#slider default
 		sliderDefault = 30
-		
+
 		#read in list of spectra from all.cat file
 		specListFile = "../spec/notes/all.cat"
 		self.specNum = 0
@@ -137,35 +132,35 @@ class ApplicationWindow(QMainWindow):
 				print("Error reading in redshift data")
 				emRedshift = -2.0
 				absRedshift = -2.0
-				
+
 			self.filenames = np.append(self.filenames, str(fields+".b."+objects+".msdc_v.fits"))
 			self.guessemRedshifts = np.append(self.guessemRedshifts, emRedshift)
 			self.guessabsRedshifts = np.append(self.guessabsRedshifts, absRedshift)
 	#def __init__(self, folder, listFile, usecols, identifier=None):
 
-		self.dataSet = [dataset("../spec/", "all.cat", "msdc_v.fits", usecols =(0, 1, 2, 3, 4)), 
+		self.dataSet = [dataset("../spec/", "all.cat", "msdc_v.fits", usecols =(0, 1, 2, 3, 4)),
 						dataset("../shapley2003_spec/", "all.cat", "msdfcv.fits", usecols =(0, 1, 2, 3, 4)),
 						dataset("../shapley2006_spec/", "all.cat", "br.fits", usecols =(0, 1, 2, 3, 4))]
-		
+
 		#more application attributes
 		self.file_menu = QMenu('&File', self)
 		self.file_menu.addAction('&Quit', self.fileQuit, QtCore.Qt.META + QtCore.Qt.Key_W)
 		self.menuBar().addMenu(self.file_menu)
 
-		
+
 		#create the buttons
 		self.findSpecButton = QPushButton("Find Emission Lines")
 		self.getRedshiftButton = QPushButton("Find z")
 		self.nextSpecButton = QPushButton("Next Spectrum")
-		self.prevSpecButton = QPushButton("Prev Spectrum")	
+		self.prevSpecButton = QPushButton("Prev Spectrum")
 		self.createPlotsCheck = QCheckBox("Plots")
 		self.getAllZButton = QPushButton("Find All Redshifts")
 		self.loadDataButton = QPushButton("Load Spectra From File")
 		self.cycleDataSetButton = QPushButton("Cycle DataSet")
 		self.subSpecNSlider = QSlider(QtCore.Qt.Horizontal, self)
-		#create the main widget	
+		#create the main widget
 		self.main_widget = QWidget(self)
-		
+
 		#add the elements to the layout
 		self.layout = QVBoxLayout(self.main_widget)
 
@@ -177,39 +172,39 @@ class ApplicationWindow(QMainWindow):
 		self.specSelectLayout.addWidget(self.nextSpecButton)
 
 		self.layout.addLayout(self.specSelectLayout)
-		
+
 		self.findZLayout = QHBoxLayout()
 		self.sliderLabel=QLabel("SubSpecN: "+str(sliderDefault))
 		self.subSpecNSlider.setMinimum(1)
 		self.subSpecNSlider.setMaximum(50)
-		
+
 		self.subSpecNSlider.setSliderPosition(sliderDefault)
 		#self.Ztext = QLabel("<--- Finding Redshift Tools --->")
 		#self.Ztext.setAlignment(QtCore.Qt.AlignCenter)
 		self.findZLayout.addWidget(self.getRedshiftButton)
 		self.findZLayout.addStretch(1)
-		
+				
 		self.findZLayout.addWidget(self.sliderLabel)
 		self.findZLayout.addWidget(self.subSpecNSlider)
 		self.findZLayout.addWidget(self.createPlotsCheck)
 		self.findZLayout.addWidget(self.getAllZButton)
 
 		self.layout.addLayout(self.findZLayout)
-		
-		
+
+
 		self.layout.addWidget(self.loadDataButton)
 		self.layout.addWidget(self.cycleDataSetButton)
-		
+
 		self.dynamic = DynamicPlotCanvas(self.dataSet[self.dataSetNum].spectrum, self.main_widget, width=10, height=4, dpi = 100)
-		
+
 		#self.layout.addWidget(self.getRedshiftButton)
 		#self.layout.addWidget(self.getAllZButton)
 
 		self.layout.addWidget(self.dynamic) #this is the spectrum window
-		
+
 		self.layout.addStretch(1)
 
-		
+
 
 		#connect the buttons so they can be clicked
 		self.findSpecButton.clicked.connect(self.findLines)
@@ -220,15 +215,15 @@ class ApplicationWindow(QMainWindow):
 		self.loadDataButton.clicked.connect(self.loadData)
 		self.cycleDataSetButton.clicked.connect(self.cycleDataSet)
 		self.subSpecNSlider.valueChanged[int].connect(self.changeSliderValue)
-		
-		#make the 
+
+		#make the
 		self.main_widget.setFocus()
 		self.setCentralWidget(self.main_widget)
-		
+
 	#quit the application
 	def fileQuit(self):
 		self.close()
-		
+
 	#also quit the application
 	def closeEvent(self, ce):
 		self.fileQuit()
@@ -238,7 +233,7 @@ class ApplicationWindow(QMainWindow):
 	def findLines(self):
 		self.dynamic.spectrum.findRms(4)
 		self.dynamic.spectrum.removeDupPeaks()
-		
+
 	#find the redshift of current spectrum
 	def findZ(self):
 		#if no peaks have been searched for yet
@@ -257,13 +252,13 @@ class ApplicationWindow(QMainWindow):
 			#fit the peak to a gaussian, return the center
 			peakfit = self.dynamic.spectrum.fitLine(highestPeak)
 			print(peakfit)
-			
+
 	#activates when the value of the slider changes and gets the new value as input.
 	#changes the label to the new value
 	def changeSliderValue(self, value):
 		self.sliderLabel.setText("SubSpecN: "+str(value))
 
-			
+
 	#find redshifts of all spectra
 	def findAllZ(self):
 		starttime = time.time()
@@ -279,7 +274,7 @@ class ApplicationWindow(QMainWindow):
 		nabszs = 0
 		subSpecN = self.subSpecNSlider.value()
 		for dataset in self.dataSet:
-		
+
 			print(dataset)
 			#loop through each file
 			for file in range(len(dataset.filenames)):
@@ -288,7 +283,7 @@ class ApplicationWindow(QMainWindow):
 				#find all peaks in the file
 				spec.findRms(4)
 				spec.removeDupPeaks()
-			
+
 				#define local data
 				wavelengths = spec.wavelengths
 				data = spec.spec
@@ -308,6 +303,7 @@ class ApplicationWindow(QMainWindow):
 						#check if the objects is labeled as a Lyman alpha emitter
 						if ('lae' in dataset.filenames[file]):
 							laezs = np.append(laezs, peakfit)
+							dataset.galaxies[dataset.objects[file]].addType("lae")
 						logfile.write(str(file)+ "	"+ dataset.filenames[file]+"	z=" +str(peakfit)+ '\n')
 						#absz = spec.fitAbsLine(highestPeak, plotBool)
 						#abszs = np.append(abszs, absz)
@@ -321,9 +317,9 @@ class ApplicationWindow(QMainWindow):
 						#same fitting technique as before
 						emRedshiftIndex = np.argmin(np.abs(wavelengths -(dataset.guessemRedshifts[file]+1)*LyA))
 						print("Emredshift:",emRedshiftIndex, dataset.guessemRedshifts[file])
-					
+
 						peakfit = spec.fitLine([emRedshiftIndex], plotBool, subSpecN)
-						
+
 						zs = np.append(zs, peakfit)
 						if ('lae' in dataset.filenames[file]):
 							laezs = np.append(laezs, peakfit)
@@ -349,40 +345,20 @@ class ApplicationWindow(QMainWindow):
 							lineSpec += gaussian
 						multSpec = (spec.spec)*lineSpec
 						integrals = np.append(integrals, np.trapz(wavelengths, multSpec))
-					
+
 					abszs = np.append(abszs, zlist[integrals.argmax()])
 					logfile.write(str(file)+ "	"+ dataset.filenames[file]+" abs	z=" +str(zlist[integrals.argmax()])+ '\n')
 					dataset.galaxies[dataset.objects[file]].addRedshift("abs", zlist[integrals.argmax()])
 
-						# except:
-# 							print("Unable to fit Gaussian")
-# 							logfile.write(str(file) +"	"+ dataset.filenames[file]+ "	Unable to calculate absorption redshift"+ '\n')
-# 
-# 				else:
-# 					print("This object is a duplicate")
-# 					logfile.write(str(file)+ "	"+ dataset.filenames[file]+" Duplicate "+ '\n')
+
 
 		print("Got ", zs.size, " Redshifts: ",zs)
 		print("Got ", laezs.size, "LAE Redshifts: ",laezs)
 		print("Got ", abszs.size, "Absorption Redshifts: ", abszs)
 
 		print("Found ", zs.size, " redshifts in ", time.time()-starttime, " seconds")
-		
-		#plot histogram
-		#plt.hist(zs, bins=500, range=(2, 3.5),histtype="stepfilled",color='black' )
-# 		plt.cla()
-# 		plt.hist([zs, abszs], bins=500, range=(2, 3.5),histtype="step",color=['blue', 'red'],  stacked=False, linewidth=3 )
-# 		#plt.ylim([0,20])
-# 		#plt.hist(laezs, bins=500, range=(2, 3.5))
-# 		#plt.hist(abszs, bins=500, range=(2, 3.5))
-# 		plt.xlabel("z")
-# 		plt.ylabel("Number")
-# 		plt.xlim([3.0,3.2])
-# 		#self.printData()
-# 
-# 		plt.show()
+
 		self.plotHistogram()
-			
 
 	#switch data sets
 	def cycleDataSet(self):
@@ -395,9 +371,7 @@ class ApplicationWindow(QMainWindow):
 		self.dynamic = DynamicPlotCanvas(self.dataSet[self.dataSetNum%3].spectrum, self.main_widget, width=10, height=4, dpi = 100)
 		self.layout.addWidget(self.dynamic)
 
-			
-		
-		
+
 	#display the previous spectrum in the list
 	def prevSpec(self):
 		if self.specNum > 0:
@@ -413,7 +387,7 @@ class ApplicationWindow(QMainWindow):
 			self.layout.addWidget(self.dynamic)
 		else:
 			pass
-		
+
 	#display the next spectrum in the list
 	def nextSpec(self):
 		self.specNum += 1
@@ -424,32 +398,32 @@ class ApplicationWindow(QMainWindow):
 		self.dataSet[self.dataSetNum%3].setSpectrum(self.specNum)
 		self.dynamic = DynamicPlotCanvas(self.dataSet[self.dataSetNum%3].spectrum, self.main_widget, width=10, height=4, dpi = 100)
 		self.layout.addWidget(self.dynamic)
-		
+
 	def loadData(self):
 		fname = QFileDialog.getOpenFileName( self, 'Select Files', '', "", "", QFileDialog.DontUseNativeDialog )
 		print(fname[0])
 		spec, header = pyfits.getdata(fname[0], 0, header=True)
 		print(spec)
-		
-		
+
 	def printData(self):
 		for dataset in self.dataSet:
 			dataset.outputData()
-			
+
 	def plotHistogram(self):
 		zs = np.array([])
 		abszs = np.array([])
-		
+
 		for dataset in self.dataSet:
 			for gal in dataset.galaxies:
-				z = np.average(dataset.galaxies[gal].emRedshifts)
+				dataset.galaxies[gal].systematicShift()
+				z = np.average(dataset.galaxies[gal].sysRedshift)
 				absz = np.average(dataset.galaxies[gal].absRedshifts)
 				if isnan(z):
 					z = 0
 				if isnan(absz):
 					absz = 0
 				if z>0:
-					print("object: ", gal, " has redshifts: ", dataset.galaxies[gal].emRedshifts, " with average: ", z)
+					print("object:", gal, "of type", dataset.galaxies[gal].type, "has redshifts:", dataset.galaxies[gal].emRedshifts, "with average:", z)
 				zs = np.append(zs, z)
 				abszs = np.append(abszs, absz)
 		#plot histogram
@@ -467,9 +441,9 @@ class ApplicationWindow(QMainWindow):
 if __name__ == '__main__':
 	#start the application
 	app = QApplication(sys.argv)
-	
+
 	aw = ApplicationWindow()
 	aw.show()
-	
+
 	app.exec_()
 	logfile.close()
