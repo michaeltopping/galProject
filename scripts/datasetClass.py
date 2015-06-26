@@ -17,6 +17,7 @@ def gauss(wavelengths, a, center, sigma):
 	return a*np.exp(-(wavelengths-center)**2/(2*sigma**2))
 
 #dataset class
+#this will be used if data from more than one place are being used, and we want to keep them separate
 class dataset():
 	def __init__(self, folder, listFile, suffix, **kwargs):
 		self.folder = folder
@@ -43,8 +44,11 @@ class dataset():
 		self.apertures = np.array([])
 		self.galaxies = {}
 		objectlist = []
+
+		#loop through each line in the "all.cat" file
 		for ii in range(np.shape(data)[0]):
 			
+			#check the format of the file
 			if not('usecols' in kwargs):
 				data = np.genfromtxt(specListFile, dtype=np.str_)
 
@@ -53,6 +57,10 @@ class dataset():
 				self.guessemRedshifts = np.append(self.guessemRedshifts, -2)
 				self.guessabsRedshifts = np.append(self.guessabsRedshifts, -2)
 				self.apertures = np.append(self.apertures, 1)
+
+			#if it is in a 5 column format do this
+			#the columns are:
+			#mask - object - emission z - absorption z - notes
 			else:
 				data = np.genfromtxt(specListFile, dtype=np.str_, usecols=kwargs['usecols'], filling_values="xxx")
 
@@ -79,20 +87,23 @@ class dataset():
 					objectlist.append(object)
 					self.galaxies[object] = galaxy()
 					
+				#set member variables
 				self.objects = np.append(self.objects, object)
 				self.filenames = np.append(self.filenames, str(fields+"."+object+"."+suffix))
 				self.guessemRedshifts = np.append(self.guessemRedshifts, emRedshift)
 				self.guessabsRedshifts = np.append(self.guessabsRedshifts, absRedshift)
 				self.apertures = np.append(self.apertures, aperture)
 				
-	
+		#create a spectrum object as the first object in the list
 		self.spectrum = spectrum(self.folder, self.filenames[0], self.guessemRedshifts[0], self.guessabsRedshifts[0], self.apertures[0])
 			
 		
+	#change the current spectrum to the spectrum identified with "index"
 	def setSpectrum(self, index):
 		self.spectrum = spectrum(self.folder, self.filenames[index], self.guessemRedshifts[index], self.guessabsRedshifts[0], self.apertures[index])
 		
 
+	#this will print out the type of object each galaxy is, and its redshift.
 	def outputData(self):
 		for ii in range(self.filenames.size):
 			print(self.filenames[ii]+" emission z="+str(self.galaxies[self.objects[ii]].emRedshifts) + " absorption z="+str(self.galaxies[self.objects[ii]].absRedshifts))

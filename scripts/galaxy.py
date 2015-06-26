@@ -1,4 +1,5 @@
 import numpy as np
+from math import *
 
 #constants
 LyA = 1215.67
@@ -12,7 +13,8 @@ class galaxy():
 		self.type = ""
 		self.sysRedshift = 0
 
-
+	#add a redshift measurement
+	#type deciedes whether it is from emission lines, or absorption lines
 	def addRedshift(self, type, z):
 		if type=="em":
 			self.emRedshifts = np.append(self.emRedshifts, z)
@@ -21,15 +23,45 @@ class galaxy():
 		else:
 			print("Incorrect type, no redshifts was added.")
 
+	#add a type to the galaxy
+	#these types include lae, lbg, double peaked...
 	def addType(self, type):
 		self.type += type
 
+	#change the redshift based on the type of spectral features it contains.
+	# shift data from Adelberger et al. 2003
 	def systematicShift(self):
-		#change the redshift based on the type of spectral features it contains.
-		# shift data from Adelberger et al. 2003
+
+		#if the galaxy has only LyA emission, and no absorption features.
+		#we want to shift it by 310km/s on average
 		if (self.emRedshifts.size > 0 and self.absRedshifts.size == 0):
-			self.sysRedshift = np.average(self.emRedshifts)
+			z = np.average(self.emRedshifts)
+			#shift redshift into velocity space, then add the 310km/s then shift back to redshift space
+			vel = ((z+1)**2-1)/((z+1)**2+1)
+			vel = (vel*3e5-310.)/3e5
+			z = sqrt((1+vel)/(1-vel))-1
+			self.sysRedshift = z
+
+
+		#if the galaxy shows LyA emission features as well as interstellar absorption features.
 		elif (self.emRedshifts.size > 0 and self.absRedshifts.size > 0):
-			self.sysRedshift = (np.average(self.emRedshifts) + self.absRedshifts)/2.
+			zEm = np.average(self.emRedshifts)
+			zAbs = np.average(self.absRedshifts)
+			velEm = ((zEm+1)**2-1)/((zEm+1)**2+1)
+			velAbs = ((zAbs+1)**2-1)/((zAbs+1)**2+1)
+			vel = (velEm*3e5-230.+0.114*abs(velEm-velAbs))/3e5
+			z = sqrt((1+vel)/(1-vel))-1
+			self.sysRedshift = z
+
+		#if the galaxy only shows interstellar absorption features.	
 		elif (self.absRedshifts.size > 0 and self.emRedshifts.size == 0):
-			self.sysRedshift = self.absRedshifts
+			z = np.average(self.absRedshifts)
+			vel = ((z+1)**2-1)/((z+1)**2+1)
+			vel = (vel*3e5+150.)/3e5
+			z = sqrt((1+vel)/(1-vel))-1
+			self.sysRedshift = z
+
+		#if for some reason things don't work, this will happend
+		else:
+			print("Error calculating systematic shift, no lines detected.")
+			self.sysRedshift = np.average(self.emRedshifts)
