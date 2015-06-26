@@ -115,6 +115,7 @@ class spectrum():
 		self.getSmoothedSpectrum(51)
 
 	#LyAguess is in angstroms
+	#check to see if the Lyman Alpha line is double peaked
 	def isDoublePeaked(self, wavelengths, spec, LyAguess):
 		dspec = np.array([])
 		dlambda = np.array([])
@@ -125,27 +126,35 @@ class spectrum():
 		minWavelengthIndex = np.where(abs(wavelengths-minWavelength) == min(abs(wavelengths-minWavelength)))[0][0]
 		maxWavelengthIndex = np.where(abs(wavelengths-maxWavelength) == min(abs(wavelengths-maxWavelength)))[0][0]
 
-
+		#we want to pick out just the lyman alpha line
 		peakWavelengths = wavelengths[minWavelengthIndex:maxWavelengthIndex]
 		peakSpec = spec[minWavelengthIndex:maxWavelengthIndex]
 		peakSpec = peakSpec/max(peakSpec)
+
+		#take the derivative of the lyman alpha line profile
 		for ii in range(len(peakWavelengths)-1):
 			dspec = np.append(dspec, peakSpec[ii+1]-peakSpec[ii])
 			dlambda = np.append(dlambda, (peakWavelengths[ii+1]+peakWavelengths[ii])/2.)
+		
+		#find which points have a negative slope
 		negs=[]
 		for jj in range(len(dspec)):
 			if dspec[jj]<0:
 				negs.append(jj)
 
+		#find which points have a positive slope
 		pos = [x+1 for x in list(set(range(len(spec)-1))-set(negs))]
+
+		#points with a positive slope are shifted by one data point, then checked against negative slope points
+		#common points will be the peaks
 		peaks = list(set(pos) & set(negs))
-
-
 
 
 
 		print("Npeaks: ", len(list(np.where(peakSpec[peaks]>0.8)[0])))
 		print("Calculated peaks at: ", peakWavelengths[peaks])
+		
+		#take only peaks that are close to the max of the lyman alpha line
 		LyApeaks = []
 		for peak in list(np.where(peakSpec[peaks]>0.8)[0]):
 			peak = peaks[peak]
@@ -154,20 +163,18 @@ class spectrum():
 			LyApeaks.append(np.where(wavelengths == peakWavelengths[peak])[0][0])
 		print("Done finding peaks --------------")
 		return LyApeaks
-# 		if len(list(np.where(spec[peaks]>0.5)[0])) == 2:
-# 			return True
-# 		else:
-# 			return False
 
 
+	#get a smoothed spectrum
 	def getSmoothedSpectrum(self, smoothFac):
-		#get a smoothed spectrum
 
 		interp = interpolate.splrep(smoothSpec.smooth(self.wavelengths, smoothFac), smoothSpec.smooth(self.spec, smoothFac))
 		lambdaNew = np.linspace(min(self.wavelengths), max(self.wavelengths), len(self.spec))
 		self.smoothSpec = interpolate.splev(lambdaNew, interp, der=0)
 
 
+	#remove a section of a spectrum
+	#useful for atmospheric lines
 	def removeSpec(self, center):
 		print("Removing atmosphere line")
 		#find index of dichroic boundary
@@ -178,6 +185,8 @@ class spectrum():
 			self.spec[index] = (self.spec[dichroIndex]+self.spec[dichroIndex+2*maskSize])/2.
 
 
+	#find the rms error as a function of the spectrum
+	#will be used to find where the emission lines are located in the spectra
 	def findRms(self, rmsThresh):
 		#find the rms deviation in the spectra
 		rmsarr = np.array([])
@@ -205,6 +214,8 @@ class spectrum():
 		print("Found peaks at ", self.peaks)
 
 
+	#if an emission line is large enough, it will contain more than one datapoint above the threshold for detecting lines
+	#these lines will be counted more than once, so we remove all but the central data point.
 	def removeDupPeaks(self):
 		lastpeak = 0
 		nInPeak = 0
@@ -248,6 +259,8 @@ class spectrum():
 		print("Reduced peaks at peaks: ", self.peaks)
 
 
+	#this will fit an emission line
+	#returns the best fit center of the line
 	def fitLine(self, peak, plotBool, subSpecN):
 		#how many wavelength points away from center we want to consider
 		#subSpecN = 15
@@ -264,7 +277,7 @@ class spectrum():
 
 
 
-
+		#check if the line is double peaked, then it will have different behavior when calculating systematic redshift
 		doublePeaks = self.isDoublePeaked(self.wavelengths, self.spec, self.wavelengths[peak])
 		if len(doublePeaks) == 2:
 			doublePeaked = True
@@ -274,6 +287,7 @@ class spectrum():
 		print("Peaks in LyA: ", doublePeaks)
 		print("Corresponds to: ", self.wavelengths[doublePeaks])
 
+		#the redshift will then be fit to the trough in the center
 		if doublePeaked:
 			trough = self.spec[min(doublePeaks):max(doublePeaks)].argmin()+min(doublePeaks)
 
@@ -337,28 +351,40 @@ class spectrum():
 		else:
 			return -2
 
+
+	#this will fit a series of absorption lines, requires a guess of the redshift
+	#uses cross correlation to find the most likely absorption redshift
 	def fitAbsLine(self, peak, plotBool):
 		print("Calculating absorption redshift")
 		zguess = self.wavelengths[peak[0]]/LyA-1
 		print("Zguess is ", zguess)
+
+		#create a list of redshifts to iterate over
 		zlist = np.linspace(zguess*0.998,zguess*1.002, 100)
 		integrals = np.array([])
 		zstep = 0
+
+		#for each iterative redshift
 		for z in zlist:
 			zstep += 1
 			sys.stdout.write("\rCalculating absorption redshift: |"+"-"*int(zstep/4)+"."*(25-int(zstep/4))+"|%d%%" % int(zstep))
 			sys.stdout.flush()
 			lineSpec = np.zeros(np.shape(self.fullspec)[0])
+
+			#for each metal line in our list, create a line and add it to our comparison spectrum
 			for kk in range(lines.size):
 				line = ((z+1)*lines[kk])
 				gaussian = f[kk]*np.exp(-((self.fullwavelengths - line)**2)/(2*W[kk]**2))
 				lineSpec += gaussian
+
+			#multiply our comparison spectrum by the data, then integrate
 			multSpec = (self.fullspec)*lineSpec
 			integrals = np.append(integrals, np.trapz(self.fullwavelengths, multSpec))
 
+		#pick out the peak of the cross correlation
 		absZ = zlist[integrals.argmax()]
 
-
+		#if wanted, create a plot of the spectrum with absorption lines noted.
 		if (plotBool):
 			print("Checking to see if directory exists")
 			if not(os.path.isdir("./images/"+self.filename[0:-5])):
