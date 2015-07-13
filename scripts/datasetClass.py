@@ -8,6 +8,7 @@ import smoothSpec
 from scipy import interpolate
 import os
 from galaxy import galaxy
+from matplotlib.colors import LogNorm
 
 #constants
 LyA = 1215.67
@@ -107,3 +108,43 @@ class dataset():
 	def outputData(self):
 		for ii in range(self.filenames.size):
 			print(self.filenames[ii]+" emission z="+str(self.galaxies[self.objects[ii]].emRedshifts) + " absorption z="+str(self.galaxies[self.objects[ii]].absRedshifts))
+
+
+
+	#add positional information to the objects
+	def setAllCoords(self, folder):
+
+		#read in slit mask data
+		for filename in os.listdir(folder):
+			data = np.genfromtxt(folder+filename, dtype="str")
+			for ii in range(np.shape(data)[0]):
+				obj = data[ii][0]
+				RA = float(data[ii][3])*15+float(data[ii][4])*15./60. + float(data[ii][5])*15/60./60.
+				dec = float(data[ii][6])+float(data[ii][7])/60.+float(data[ii][8])/60./60.
+				print("Coordinates for: {obj:11s} RA={RA:3f} dec={dec:3f}".format(obj=obj, RA=RA, dec=dec))
+				if obj in self.galaxies:
+					self.galaxies[obj].setCoords(RA, dec)
+
+		for gal in self.galaxies:
+			x = (self.galaxies[gal].RA-334.3852)/(-1.388888e-5)+3100.
+			y = (self.galaxies[gal].dec-0.19403)/(-1.388888e-5)+3100.
+			plt.scatter(x, y, facecolors='none', edgecolors='r')
+			#plt.text(self.galaxies[gal].RA, self.galaxies[gal].dec, gal)
+
+		plt.xlabel("Right Ascension")
+		plt.ylabel("Declination")
+		# plt.xlim([334.32,334.43])
+		# plt.ylim([0.175, 0.315])
+		plt.xlim([0,6000])
+		plt.ylim([0, 6000])
+
+		#read in the hubble image
+		image_data = pyfits.getdata("../image_data/HST_10405_07_ACS_WFC_F814W_drz.fits")
+		image_data[image_data<0]=0
+
+		image_data += 0.1
+
+		plt.imshow(image_data, cmap='gray', vmax = 2*np.average(image_data), norm=LogNorm())
+
+		plt.savefig("coords.eps", format="eps", dpi=1000)
+		plt.show()

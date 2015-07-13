@@ -12,6 +12,9 @@ class galaxy():
 		self.absRedshifts = np.array([])
 		self.type = ""
 		self.sysRedshift = 0
+		self.RA = 0
+		self.dec = 0
+
 
 	#add a redshift measurement
 	#type deciedes whether it is from emission lines, or absorption lines
@@ -32,9 +35,14 @@ class galaxy():
 	# shift data from Adelberger et al. 2003
 	def systematicShift(self):
 
+		#if the lyman alpha line is double peaked
+		if ("d" in self.type):
+			z = np.average(self.emRedshifts)
+			self.sysRedshift = z
+
 		#if the galaxy has only LyA emission, and no absorption features.
 		#we want to shift it by 310km/s on average
-		if (self.emRedshifts.size > 0 and self.absRedshifts.size == 0):
+		elif (self.emRedshifts.size > 0 and self.absRedshifts.size == 0):
 			z = np.average(self.emRedshifts)
 			#shift redshift into velocity space, then add the 310km/s then shift back to redshift space
 			vel = ((z+1)**2-1)/((z+1)**2+1)
@@ -65,3 +73,9 @@ class galaxy():
 		else:
 			print("Error calculating systematic shift, no lines detected.")
 			self.sysRedshift = np.average(self.emRedshifts)
+
+
+
+	def setCoords(self, RA, dec):
+		self.RA = RA
+		self.dec = dec

@@ -138,9 +138,11 @@ class ApplicationWindow(QMainWindow):
 			self.guessabsRedshifts = np.append(self.guessabsRedshifts, absRedshift)
 	#def __init__(self, folder, listFile, usecols, identifier=None):
 
-		self.dataSet = [dataset("../spec/", "all.cat", "msdc_v.fits", usecols =(0, 1, 2, 3, 4)),
+		self.dataSet = [dataset("../spec/", "all.cat", "msdfc_v.fits", usecols =(0, 1, 2, 3, 4)),
 						dataset("../shapley2003_spec/", "all.cat", "msdfcv.fits", usecols =(0, 1, 2, 3, 4)),
 						dataset("../shapley2006_spec/", "all.cat", "br.fits", usecols =(0, 1, 2, 3, 4))]
+
+
 
 		#more application attributes
 		self.file_menu = QMenu('&File', self)
@@ -153,10 +155,12 @@ class ApplicationWindow(QMainWindow):
 		self.getRedshiftButton = QPushButton("Find z")
 		self.nextSpecButton = QPushButton("Next Spectrum")
 		self.prevSpecButton = QPushButton("Prev Spectrum")
-		self.createPlotsCheck = QCheckBox("Plots")
+		self.createEmPlotsCheck = QCheckBox("Em Plots")
+		self.createAbsPlotsCheck = QCheckBox("Abs Plots")
 		self.getAllZButton = QPushButton("Find All Redshifts")
 		self.loadDataButton = QPushButton("Load Spectra From File")
 		self.cycleDataSetButton = QPushButton("Cycle DataSet")
+		self.coordsButton = QPushButton("Display Coordinates")
 		self.subSpecNSlider = QSlider(QtCore.Qt.Horizontal, self)
 		#create the main widget
 		self.main_widget = QWidget(self)
@@ -186,14 +190,17 @@ class ApplicationWindow(QMainWindow):
 				
 		self.findZLayout.addWidget(self.sliderLabel)
 		self.findZLayout.addWidget(self.subSpecNSlider)
-		self.findZLayout.addWidget(self.createPlotsCheck)
+		self.findZLayout.addWidget(self.createEmPlotsCheck)
+		self.findZLayout.addWidget(self.createAbsPlotsCheck)
 		self.findZLayout.addWidget(self.getAllZButton)
+
 
 		self.layout.addLayout(self.findZLayout)
 
 
 		self.layout.addWidget(self.loadDataButton)
 		self.layout.addWidget(self.cycleDataSetButton)
+		self.layout.addWidget(self.coordsButton)
 
 		self.dynamic = DynamicPlotCanvas(self.dataSet[self.dataSetNum].spectrum, self.main_widget, width=10, height=4, dpi = 100)
 
@@ -215,6 +222,7 @@ class ApplicationWindow(QMainWindow):
 		self.loadDataButton.clicked.connect(self.loadData)
 		self.cycleDataSetButton.clicked.connect(self.cycleDataSet)
 		self.subSpecNSlider.valueChanged[int].connect(self.changeSliderValue)
+		self.coordsButton.clicked.connect(self.displayCoords)
 
 		#make the
 		self.main_widget.setFocus()
@@ -265,7 +273,8 @@ class ApplicationWindow(QMainWindow):
 		lines = np.array([1260.42, 1303.3, 1334.5, 1393.76, 1402.77, 1526.7, 1549.5])
 		W = np.array([1.63, 2.2, 1.72, 1.83, 0.81, 1.72, 3.03])
 		f = np.array([1.007, 0.04887, .1278, .5140, .2553, .130, .1])
-		plotBool = self.createPlotsCheck.isChecked()
+		emPlotBool = self.createEmPlotsCheck.isChecked()
+		absPlotBool = self.createAbsPlotsCheck.isChecked()
 		#empty array that will hold the redshifts
 		zs = np.array([])
 		laezs = np.array([])
@@ -297,8 +306,23 @@ class ApplicationWindow(QMainWindow):
 						#pick the highest peak
 						highestPeak = np.where(data == np.max(data[peaks.astype(int)]))
 						#fit the peak to a gaussian and return the center
-						peakfit = spec.fitLine(highestPeak, plotBool, subSpecN)
+						peakfit = spec.fitLine(highestPeak, emPlotBool, subSpecN)
 						print(peakfit)
+
+
+						#check if the line is double peaked, then it will have different behavior when calculating systematic redshift
+						doublePeaks = spec.isDoublePeaked(spec.wavelengths, spec.spec, spec.wavelengths[highestPeak])
+						if len(doublePeaks) == 2:
+							doublePeaked = True
+						else:
+							doublePeaked = False
+
+						if doublePeaked:
+							trough = spec.spec[min(doublePeaks):max(doublePeaks)].argmin()+min(doublePeaks)
+							peakfit = spec.wavelengths[trough]/LyA - 1
+
+
+
 						zs = np.append(zs, peakfit)
 						#check if the objects is labeled as a Lyman alpha emitter
 						if ('lae' in dataset.filenames[file]):
@@ -318,7 +342,7 @@ class ApplicationWindow(QMainWindow):
 						emRedshiftIndex = np.argmin(np.abs(wavelengths -(dataset.guessemRedshifts[file]+1)*LyA))
 						print("Emredshift:",emRedshiftIndex, dataset.guessemRedshifts[file])
 
-						peakfit = spec.fitLine([emRedshiftIndex], plotBool, subSpecN)
+						peakfit = spec.fitLine([emRedshiftIndex], emPlotBool, subSpecN)
 
 						zs = np.append(zs, peakfit)
 						if ('lae' in dataset.filenames[file]):
@@ -335,20 +359,12 @@ class ApplicationWindow(QMainWindow):
 					print("Calculating absorption redshift")
 					nabszs += 1
 					zguess = dataset.guessabsRedshifts[file]
-					zlist = np.linspace(zguess*0.998,zguess*1.002, 1000)
-					integrals = np.array([])
-					for z in zlist:
-						lineSpec = np.zeros(np.shape(spec.spec)[0])
-						for kk in range(lines.size):
-							line = ((z+1)*lines[kk])
-							gaussian = f[kk]*np.exp(-((wavelengths - line)**2)/(2*W[kk]**2))
-							lineSpec += gaussian
-						multSpec = (spec.spec)*lineSpec
-						integrals = np.append(integrals, np.trapz(wavelengths, multSpec))
 
-					abszs = np.append(abszs, zlist[integrals.argmax()])
-					logfile.write(str(file)+ "	"+ dataset.filenames[file]+" abs	z=" +str(zlist[integrals.argmax()])+ '\n')
-					dataset.galaxies[dataset.objects[file]].addRedshift("abs", zlist[integrals.argmax()])
+					absz = spec.fitAbsLine(zguess, absPlotBool)
+
+					abszs = np.append(abszs, absz)
+					logfile.write(str(file)+ "	"+ dataset.filenames[file]+" abs	z=" +str(absz)+ '\n')
+					dataset.galaxies[dataset.objects[file]].addRedshift("abs", absz)
 
 
 
@@ -434,8 +450,13 @@ class ApplicationWindow(QMainWindow):
 		plt.hist(zs, bins=500, range=(2, 3.5), histtype="stepfilled" ,color='blue')
 		plt.xlabel("z")
 		plt.ylabel("Number")
-		plt.xlim([3.0,3.2])
+		plt.xlim([3.03,3.12])
 		plt.show()
+
+
+	def displayCoords(self):
+		#add positional information to datasets
+		self.dataSet[0].setAllCoords("../spec/mask_design/")
 
 #main
 if __name__ == '__main__':

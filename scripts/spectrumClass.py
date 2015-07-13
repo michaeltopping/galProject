@@ -44,6 +44,13 @@ class spectrum():
 		self.absPeaks = np.array([])
 		self.threshSpec = np.array([])
 
+		#parameters for the fitting of LyA
+		self.lineConst = 0
+		self.lineLinear = 0
+		self.lineCenter = 0
+		self.lineSigma = 0
+		self.lineAmplitude = 0
+
 		#Read in data into spec, and header data into header
 		print("Reading in data from "+filename)
 		self.spec, header = pyfits.getdata(loc+filename, 0, header=True)
@@ -304,6 +311,14 @@ class spectrum():
 			print("Sigma = ", fitParam[2])
 			print("Continuum = ", fitParam[3])
 			print("Continuum slope = ", fitParam[4])
+
+			#set all of the line fit parameters
+			self.lineAmplitude = fitParam[0]
+			self.lineCenter = fitParam[1]+subWavelengths[subSpecN-1] #in angstroms
+			self.lineSigma = fitParam[2]
+			self.lineConst = fitParam[3]
+			self.lineLinear = fitParam[4]
+
 			z = (fitParam[1]+subWavelengths[subSpecN-1])/LyA - 1
 
 			#create a plot of each spectrum and the fitted line.
@@ -331,15 +346,33 @@ class spectrum():
 					plt.cla()
 					plt.plot(subWavelengths, subSpectra/maxSpec, linewidth=2)
 					plt.plot(subWavelengths, (subWavelengths-subWavelengths[subSpecN-1])*fitParam[4]+fitParam[3]+fitParam[0]*np.exp(-(subWavelengths-(fitParam[1]+subWavelengths[subSpecN-1]))**2/(2*fitParam[2]**2)), linewidth=2, label="z=%.3f" % z+"d"*doublePeaked)
-					plt.plot(subWavelengths, (subWavelengths-subWavelengths[subSpecN-1])*fitParam[4]+fitParam[3]+fitParam[0]*np.exp(-(subWavelengths-(fitParam[1]+subWavelengths[subSpecN-1]))**2/(2*fitParam[2]**2)) - subSpectra/maxSpec, 'r')
+					#plt.plot(subWavelengths, (subWavelengths-subWavelengths[subSpecN-1])*fitParam[4]+fitParam[3]+fitParam[0]*np.exp(-(subWavelengths-(fitParam[1]+subWavelengths[subSpecN-1]))**2/(2*fitParam[2]**2)) - subSpectra/maxSpec, 'r')
 					if doublePeaked:
 						plt.plot([self.wavelengths[trough], self.wavelengths[trough]], [0,1], 'k')
 					plt.legend()
 					if doublePeaked:
 						plt.plot(self.wavelengths[doublePeaks], self.spec[doublePeaks]/max(subSpectra), 'ko')
+
+					width = 3*fitParam[2]
+					center = fitParam[1]+subWavelengths[subSpecN-1]
+					continuumWavelengths = subWavelengths.clip((center-width), (center+width))
+					continuumSpec = fitParam[3]+fitParam[4]*(continuumWavelengths-subWavelengths[subSpecN-1])
+
+					plt.plot(continuumWavelengths, continuumSpec, 'k', linewidth=2)
+					print(continuumWavelengths, continuumSpec)
+
+
+					plt.plot([center+width, center+width], [0,1], 'k')
+					plt.plot([center-width, center-width], [0,1], 'k')
+					plt.xlim([subWavelengths[0], subWavelengths[-1]])
+
 					plt.savefig("./images/all/"+str(z)+"d"*doublePeaked+"_"+self.filename[0:-5]+"_linespec.png")
 
 			if not doublePeaked:
+
+				#find the equivalent width of LyA if not double peaked
+				EW = np.trapz()
+
 				if fitParam[0]<0:
 					return -1*(fitParam[1]+subWavelengths[subSpecN-1])/LyA+1
 				elif fitParam[0]>0:
@@ -354,13 +387,15 @@ class spectrum():
 
 	#this will fit a series of absorption lines, requires a guess of the redshift
 	#uses cross correlation to find the most likely absorption redshift
-	def fitAbsLine(self, peak, plotBool):
+	def fitAbsLine(self, zguess, plotBool):
 		print("Calculating absorption redshift")
-		zguess = self.wavelengths[peak[0]]/LyA-1
+		#zguess = self.wavelengths[peak[0]]/LyA-1
 		print("Zguess is ", zguess)
 
+		absZthresh = 0.02
+
 		#create a list of redshifts to iterate over
-		zlist = np.linspace(zguess*0.998,zguess*1.002, 100)
+		zlist = np.linspace(zguess*(1-absZthresh),zguess*(1+absZthresh), 100)
 		integrals = np.array([])
 		zstep = 0
 
@@ -392,20 +427,39 @@ class spectrum():
 				print("Created directory")
 
 			plt.cla()
-			plt.plot(self.fullwavelengths, self.fullspec)
-			for peak in lines*(absZ+1):
-				plt.plot([peak, peak], [min(self.fullspec)-10, 0], 'r--', linewidth = 2)
+			plt.plot(self.fullwavelengths, self.fullspec/max(self.spec))
+			for ii in range(len(lines*(absZ+1))):
+				peak = (lines*(absZ+1))[ii]
+				plt.plot([peak, peak], [-1, 1], 'r--', linewidth = 2)
+				#plt.plot([(lines*(zguess*(1-absZthresh)+1))[ii], (lines*(zguess*(1-absZthresh)+1))[ii]], [-1, 1], 'r', linewidth = .5)
+				#plt.plot([(lines*(zguess*(1+absZthresh)+1))[ii], (lines*(zguess*(1+absZthresh)+1))[ii]], [-1, 1], 'r', linewidth = .5)
+
+
+			plt.xlim([min(lines*(absZ+1)), max(lines*(absZ+1))])
+			plt.ylim([-1, 1])
 			plt.savefig("./images/"+self.filename[0:-5]+"/absorbspec.png")
 
 			if not(os.path.isdir("./images/all/absorption/")):
 				os.makedirs("./images/all/absorption/")
 			plt.cla()
-			plt.plot(self.fullwavelengths, self.fullspec)
-			for peak in lines*(absZ+1):
-				plt.plot([peak, peak], [min(self.fullspec)-10, 0], 'r--', linewidth = 2)
+			plt.plot(self.fullwavelengths, self.fullspec/max(self.spec))
+			for ii in range(len(lines*(absZ+1))):
+				peak = (lines*(absZ+1))[ii]
+				plt.plot([peak, peak], [-1, 1], 'r--', linewidth = 2)
+				#plt.plot([(lines*(zguess*(1-absZthresh)+1))[ii], (lines*(zguess*(1-absZthresh)+1))[ii]], [-1, 1], 'r', linewidth = .5)
+				#plt.plot([(lines*(zguess*(1+absZthresh)+1))[ii], (lines*(zguess*(1+absZthresh)+1))[ii]], [-1, 1], 'r', linewidth = .5)
+
+
+			plt.xlim([min(lines*(absZ+1)), max(lines*(absZ+1))])
+			plt.ylim([-1, 1])
 			plt.savefig("./images/all/absorption/"+str(absZ)+"_"+self.filename[0:-5]+"_absorbspec.png")
 
 
 
 
 		return absZ
+
+
+	#find the equivalent width of the Lyman alpha line
+	def calculateEQ(self):
+		return
