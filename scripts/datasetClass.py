@@ -7,7 +7,7 @@ from scipy.optimize import curve_fit
 import smoothSpec
 from scipy import interpolate
 import os
-from galaxy import galaxy
+from galaxy import Object
 from matplotlib.colors import LogNorm
 
 #constants
@@ -86,15 +86,16 @@ class dataset():
 					aperture = 1
 				if not(object in objectlist):
 					objectlist.append(object)
-					self.galaxies[object] = galaxy()
+					self.galaxies[object] = Object()
+
 					
 				#set member variables
+
 				self.objects = np.append(self.objects, object)
 				self.filenames = np.append(self.filenames, str(fields+"."+object+"."+suffix))
 				self.guessemRedshifts = np.append(self.guessemRedshifts, emRedshift)
 				self.guessabsRedshifts = np.append(self.guessabsRedshifts, absRedshift)
 				self.apertures = np.append(self.apertures, aperture)
-				
 		#create a spectrum object as the first object in the list
 		self.spectrum = spectrum(self.folder, self.filenames[0], self.guessemRedshifts[0], self.guessabsRedshifts[0], self.apertures[0])
 			

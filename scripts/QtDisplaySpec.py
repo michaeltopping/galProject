@@ -18,6 +18,7 @@ import smoothSpec
 from scipy import interpolate
 from datasetClass import dataset
 from spectrumClass import spectrum
+from galaxy import Galaxy
 
 
 
@@ -115,6 +116,9 @@ class ApplicationWindow(QMainWindow):
 		#slider default
 		sliderDefault = 30
 
+		#have a global galaxy list
+		self.galaxies={}
+
 		#read in list of spectra from all.cat file
 		specListFile = "../spec/notes/all.cat"
 		self.specNum = 0
@@ -142,6 +146,16 @@ class ApplicationWindow(QMainWindow):
 						dataset("../shapley2003_spec/", "all.cat", "msdfcv.fits", usecols =(0, 1, 2, 3, 4)),
 						dataset("../shapley2006_spec/", "all.cat", "br.fits", usecols =(0, 1, 2, 3, 4))]
 
+		#add the list of galaxies to the global
+		#go through each of the datasets
+		for dSet in self.dataSet:
+			#look at each galaxy in each of the datasets.
+			for galName, galObject in dSet.galaxies.items():
+				#check if this object is in the galaxies list
+				if not galName in self.galaxies:
+					self.galaxies[galName]=Galaxy(galName)
+
+
 
 
 		#more application attributes
@@ -160,7 +174,7 @@ class ApplicationWindow(QMainWindow):
 		self.getAllZButton = QPushButton("Find All Redshifts")
 		self.loadDataButton = QPushButton("Load Spectra From File")
 		self.cycleDataSetButton = QPushButton("Cycle DataSet")
-		self.coordsButton = QPushButton("Display Coordinates")
+		self.coordsButton = QPushButton("Write Out Data")
 		self.subSpecNSlider = QSlider(QtCore.Qt.Horizontal, self)
 		#create the main widget
 		self.main_widget = QWidget(self)
@@ -222,7 +236,7 @@ class ApplicationWindow(QMainWindow):
 		self.loadDataButton.clicked.connect(self.loadData)
 		self.cycleDataSetButton.clicked.connect(self.cycleDataSet)
 		self.subSpecNSlider.valueChanged[int].connect(self.changeSliderValue)
-		self.coordsButton.clicked.connect(self.displayCoords)
+		self.coordsButton.clicked.connect(self.writeData)
 
 		#make the
 		self.main_widget.setFocus()
@@ -320,6 +334,7 @@ class ApplicationWindow(QMainWindow):
 						if doublePeaked:
 							trough = spec.spec[min(doublePeaks):max(doublePeaks)].argmin()+min(doublePeaks)
 							peakfit = spec.wavelengths[trough]/LyA - 1
+							self.galaxies[dataset.objects[file]].type.append('d')
 
 
 
@@ -327,12 +342,10 @@ class ApplicationWindow(QMainWindow):
 						#check if the objects is labeled as a Lyman alpha emitter
 						if ('lae' in dataset.filenames[file]):
 							laezs = np.append(laezs, peakfit)
-							dataset.galaxies[dataset.objects[file]].addType("lae")
+							self.galaxies[dataset.objects[file]].type.append('lae')
 						logfile.write(str(file)+ "	"+ dataset.filenames[file]+"	z=" +str(peakfit)+ '\n')
-						#absz = spec.fitAbsLine(highestPeak, plotBool)
-						#abszs = np.append(abszs, absz)
-						dataset.galaxies[dataset.objects[file]].addRedshift("em", peakfit)
-						#dataset.galaxies[dataset.objects[file]].addRedshift("abs", absz)
+
+						self.galaxies[dataset.objects[file]].emRedshifts.append(peakfit)
 					except:
 						print("Error finding peak")
 				#if no peaks were found, use estimation from emission lines
@@ -347,10 +360,10 @@ class ApplicationWindow(QMainWindow):
 						zs = np.append(zs, peakfit)
 						if ('lae' in dataset.filenames[file]):
 							laezs = np.append(laezs, peakfit)
+							self.galaxies[dataset.objects[file]].type.append('lae')
 						logfile.write(str(file)+ "	"+ dataset.filenames[file]+"	z=" +str(peakfit)+ '\n')
-
-						dataset.galaxies[dataset.objects[file]].addRedshift("em", peakfit)
-
+						if peakfit > 0:
+							self.galaxies[dataset.objects[file]].emRedshifts.append(peakfit)
 					except RuntimeError:
 						print("Unable to fit Gaussian")
 						logfile.write(str(file) +"	"+ dataset.filenames[file]+ "	Unable to fit Gaussian"+ '\n')
@@ -364,8 +377,7 @@ class ApplicationWindow(QMainWindow):
 
 					abszs = np.append(abszs, absz)
 					logfile.write(str(file)+ "	"+ dataset.filenames[file]+" abs	z=" +str(absz)+ '\n')
-					dataset.galaxies[dataset.objects[file]].addRedshift("abs", absz)
-
+					self.galaxies[dataset.objects[file]].absRedshifts.append(absz)
 
 
 		print("Got ", zs.size, " Redshifts: ",zs)
@@ -425,23 +437,30 @@ class ApplicationWindow(QMainWindow):
 		for dataset in self.dataSet:
 			dataset.outputData()
 
+	def writeData(self):
+		print("Writing galaxy data to 'output.dat'")
+		outputFile = open("output.dat", 'w')
+		for gal, galObject in self.galaxies.items():
+			outputFile.write("{:11}   {:6.4f}    {}\n".format(gal, self.galaxies[gal].sysRedshift, self.galaxies[gal].emRedshifts))
+		outputFile.close()
+		print("Finished writing data")
+
+
 	def plotHistogram(self):
 		zs = np.array([])
 		abszs = np.array([])
 
-		for dataset in self.dataSet:
-			for gal in dataset.galaxies:
-				dataset.galaxies[gal].systematicShift()
-				z = np.average(dataset.galaxies[gal].sysRedshift)
-				absz = np.average(dataset.galaxies[gal].absRedshifts)
-				if isnan(z):
-					z = 0
-				if isnan(absz):
-					absz = 0
-				if z>0:
-					print("object:", gal, "of type", dataset.galaxies[gal].type, "has redshifts:", dataset.galaxies[gal].emRedshifts, "with average:", z)
-				zs = np.append(zs, z)
-				abszs = np.append(abszs, absz)
+
+		for gal, galaxyObj in self.galaxies.items():
+			self.galaxies[gal].systematicShift()
+			z = np.average(self.galaxies[gal].sysRedshift)
+			absz = np.average(self.galaxies[gal].absRedshifts)
+			if isnan(z):
+				z = 0
+			if isnan(absz):
+				absz = 0
+			zs = np.append(zs, z)
+			abszs = np.append(abszs, absz)
 		#plot histogram
 		plt.cla()
 		#for emission and absorption
@@ -450,7 +469,7 @@ class ApplicationWindow(QMainWindow):
 		plt.hist(zs, bins=500, range=(2, 3.5), histtype="stepfilled" ,color='blue')
 		plt.xlabel("z")
 		plt.ylabel("Number")
-		plt.xlim([3.03,3.12])
+		plt.xlim([3.0,3.15])
 		plt.show()
 
 
@@ -465,6 +484,6 @@ if __name__ == '__main__':
 
 	aw = ApplicationWindow()
 	aw.show()
-
+	print("Starting Application.")
 	app.exec_()
 	logfile.close()

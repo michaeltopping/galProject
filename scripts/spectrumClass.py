@@ -51,6 +51,9 @@ class spectrum():
 		self.lineSigma = 0
 		self.lineAmplitude = 0
 
+		#equivalent width
+		self.EW = 0
+
 		#Read in data into spec, and header data into header
 		print("Reading in data from "+filename)
 		self.spec, header = pyfits.getdata(loc+filename, 0, header=True)
@@ -369,14 +372,21 @@ class spectrum():
 					plt.savefig("./images/all/"+str(z)+"d"*doublePeaked+"_"+self.filename[0:-5]+"_linespec.png")
 
 			if not doublePeaked:
+				width = 3*fitParam[2]
+				center = fitParam[1]+subWavelengths[subSpecN-1]
+				continuumWavelengths = subWavelengths.clip((center-width), (center+width))
+				continuumSpec = fitParam[3]+fitParam[4]*(continuumWavelengths-subWavelengths[subSpecN-1])
+				linSpec = self.spec[np.where(subWavelengths.clip(center-width, center+width)==continuumWavelengths)]
 
 				#find the equivalent width of LyA if not double peaked
-				EW = np.trapz()
-
-				if fitParam[0]<0:
-					return -1*(fitParam[1]+subWavelengths[subSpecN-1])/LyA+1
-				elif fitParam[0]>0:
+				self.EW = np.trapz((continuumSpec-linSpec)/continuumSpec, x=continuumWavelengths)
+				print("Calculated the equivalent width to be: {:5.3f} Angstroms".format(self.EW))
+				# if fitParam[0]<0:
+				# 	return -1*(fitParam[1]+subWavelengths[subSpecN-1])/LyA+1
+				if fitParam[0]>0:
 					return (fitParam[1]+subWavelengths[subSpecN-1])/LyA-1
+				else:
+					return -2
 			else:
 				return self.wavelengths[trough]/LyA - 1
 
