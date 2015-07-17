@@ -302,7 +302,7 @@ class ApplicationWindow(QMainWindow):
 			#loop through each file
 			for file in range(len(dataset.filenames)):
 				#create a local spectrum object for each file
-				spec = spectrum(dataset.folder, dataset.filenames[file], dataset.guessemRedshifts[file], dataset.guessabsRedshifts[file], dataset.apertures[file])
+				spec = spectrum(dataset.folder, dataset.filenames[file], dataset.objects[file], dataset.guessemRedshifts[file], dataset.guessabsRedshifts[file], dataset.apertures[file])
 				#find all peaks in the file
 				spec.findRms(4)
 				spec.removeDupPeaks()

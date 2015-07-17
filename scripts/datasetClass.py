@@ -97,12 +97,12 @@ class dataset():
 				self.guessabsRedshifts = np.append(self.guessabsRedshifts, absRedshift)
 				self.apertures = np.append(self.apertures, aperture)
 		#create a spectrum object as the first object in the list
-		self.spectrum = spectrum(self.folder, self.filenames[0], self.guessemRedshifts[0], self.guessabsRedshifts[0], self.apertures[0])
+		self.spectrum = spectrum(self.folder, self.filenames[0], self.objects[0], self.guessemRedshifts[0], self.guessabsRedshifts[0], self.apertures[0])
 			
 		
 	#change the current spectrum to the spectrum identified with "index"
 	def setSpectrum(self, index):
-		self.spectrum = spectrum(self.folder, self.filenames[index], self.guessemRedshifts[index], self.guessabsRedshifts[0], self.apertures[index])
+		self.spectrum = spectrum(self.folder, self.filenames[index], self.objects[index], self.guessemRedshifts[index], self.guessabsRedshifts[0], self.apertures[index])
 		
 
 	#this will print out the type of object each galaxy is, and its redshift.
