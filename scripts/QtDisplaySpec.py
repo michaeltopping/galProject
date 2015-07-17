@@ -332,8 +332,10 @@ class ApplicationWindow(QMainWindow):
 							doublePeaked = False
 
 						if doublePeaked:
+							#if it is double peaked we will use the redshift of the trough between the peaks
 							trough = spec.spec[min(doublePeaks):max(doublePeaks)].argmin()+min(doublePeaks)
 							peakfit = spec.wavelengths[trough]/LyA - 1
+							#add double peaked identifier to the galaxy type
 							self.galaxies[dataset.objects[file]].type.append('d')
 
 
@@ -342,9 +344,11 @@ class ApplicationWindow(QMainWindow):
 						#check if the objects is labeled as a Lyman alpha emitter
 						if ('lae' in dataset.filenames[file]):
 							laezs = np.append(laezs, peakfit)
+							#add the lae identifier to galaxy type
 							self.galaxies[dataset.objects[file]].type.append('lae')
 						logfile.write(str(file)+ "	"+ dataset.filenames[file]+"	z=" +str(peakfit)+ '\n')
 
+						#add the peak to the emRedhisft array in the galaxy object
 						self.galaxies[dataset.objects[file]].emRedshifts.append(peakfit)
 					except:
 						print("Error finding peak")
@@ -355,18 +359,22 @@ class ApplicationWindow(QMainWindow):
 						emRedshiftIndex = np.argmin(np.abs(wavelengths -(dataset.guessemRedshifts[file]+1)*LyA))
 						print("Emredshift:",emRedshiftIndex, dataset.guessemRedshifts[file])
 
+						#find the fitted peak
 						peakfit = spec.fitLine([emRedshiftIndex], emPlotBool, subSpecN)
 
 						zs = np.append(zs, peakfit)
 						if ('lae' in dataset.filenames[file]):
 							laezs = np.append(laezs, peakfit)
+							#add lae identifier to galaxy type
 							self.galaxies[dataset.objects[file]].type.append('lae')
 						logfile.write(str(file)+ "	"+ dataset.filenames[file]+"	z=" +str(peakfit)+ '\n')
 						if peakfit > 0:
 							self.galaxies[dataset.objects[file]].emRedshifts.append(peakfit)
+					#if there is a problem fitting a gaussian
 					except RuntimeError:
 						print("Unable to fit Gaussian")
 						logfile.write(str(file) +"	"+ dataset.filenames[file]+ "	Unable to fit Gaussian"+ '\n')
+				#if there is a guess for a redshift based on interstellar absorption
 				if dataset.guessabsRedshifts[file] > 0:
 # 						try:
 					print("Calculating absorption redshift")
@@ -377,15 +385,17 @@ class ApplicationWindow(QMainWindow):
 
 					abszs = np.append(abszs, absz)
 					logfile.write(str(file)+ "	"+ dataset.filenames[file]+" abs	z=" +str(absz)+ '\n')
+					#add the absorption redshift to the galaxy redshift array
 					self.galaxies[dataset.objects[file]].absRedshifts.append(absz)
 
-
-		print("Got ", zs.size, " Redshifts: ",zs)
-		print("Got ", laezs.size, "LAE Redshifts: ",laezs)
-		print("Got ", abszs.size, "Absorption Redshifts: ", abszs)
+		#print out some data about the redshifts
+		print("Got ", zs.size, " Redshifts")
+		print("Got ", laezs.size, "LAE Redshifts"
+		print("Got ", abszs.size, "Absorption Redshifts")
 
 		print("Found ", zs.size, " redshifts in ", time.time()-starttime, " seconds")
 
+		#plot a histogram of the results.
 		self.plotHistogram()
 
 	#switch data sets
@@ -439,28 +449,40 @@ class ApplicationWindow(QMainWindow):
 
 	def writeData(self):
 		print("Writing galaxy data to 'output.dat'")
+		#open the file for writing
 		outputFile = open("output.dat", 'w')
+		#go through the dictionary of galaxies
 		for gal, galObject in self.galaxies.items():
+			#write a file with the name of an object, and redshift data
 			outputFile.write("{:11}   {:6.4f}    {}\n".format(gal, self.galaxies[gal].sysRedshift, self.galaxies[gal].emRedshifts))
 		outputFile.close()
 		print("Finished writing data")
 
 
+	#create a histogram of redshift data
 	def plotHistogram(self):
+		#create two arrays, one for systemic redshifts, and one for absorption redshifts
 		zs = np.array([])
 		abszs = np.array([])
-
-
+		#loop through each galaxy
 		for gal, galaxyObj in self.galaxies.items():
-			self.galaxies[gal].systematicShift()
+			#apply the systemic shift
+			self.galaxies[gal].systemicShift()
+			#set the redshift of the average of all systemic redshift data
 			z = np.average(self.galaxies[gal].sysRedshift)
+			#set the absorption redhift as the average of the absorption redshifts
 			absz = np.average(self.galaxies[gal].absRedshifts)
+
+			#make sure no redshifts are nan
 			if isnan(z):
 				z = 0
 			if isnan(absz):
 				absz = 0
+
+			#add the redshifts to a list
 			zs = np.append(zs, z)
 			abszs = np.append(abszs, absz)
+			
 		#plot histogram
 		plt.cla()
 		#for emission and absorption
@@ -473,9 +495,9 @@ class ApplicationWindow(QMainWindow):
 		plt.show()
 
 
-	def displayCoords(self):
-		#add positional information to datasets
-		self.dataSet[0].setAllCoords("../spec/mask_design/")
+	# def displayCoords(self):
+	# 	#add positional information to datasets
+	# 	self.dataSet[0].setAllCoords("../spec/mask_design/")
 
 #main
 if __name__ == '__main__':

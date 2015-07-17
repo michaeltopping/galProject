@@ -27,7 +27,7 @@ class Galaxy():
 
 	#change the redshift based on the type of spectral features it contains.
 	# shift data from Adelberger et al. 2003
-	def systematicShift(self):
+	def systemicShift(self):
 
 		#if the lyman alpha line is double peaked
 		if ("d" in self.type):

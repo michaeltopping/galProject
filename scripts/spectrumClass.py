@@ -58,7 +58,8 @@ class spectrum():
 		#Read in data into spec, and header data into header
 		print("Reading in data from "+filename)
 		self.spec, header = pyfits.getdata(loc+filename, 0, header=True)
-		print(np.shape(self.spec))
+
+		#check how many apertures are in the image
 		if (float(header['NAXIS']) > 1):
 			nSpectra = np.shape(self.spec)[0]
 		else:
@@ -69,7 +70,7 @@ class spectrum():
 		else:
 			self.spec = self.spec[aperture-1]
 
-
+		#clip bad data
 		self.spec[np.where(self.spec > 1000)] = 0
 		self.spec[np.where(self.spec < -1000)] = 0
 
@@ -100,6 +101,7 @@ class spectrum():
 			lambdaMin = float(header['WAT2_002'].split()[index])
 			dlambda = float(header['WAT2_002'].split()[index+1])
 			Nlambda = np.shape(self.spec)[0]
+
 		#Create an array of wavelengths from fits header wavelengths solution
 		print("Creating wavelength solution")
 		self.wavelengths = np.arange(lambdaMin, lambdaMin + int(dlambda*(Nlambda)), dlambda)
@@ -175,7 +177,6 @@ class spectrum():
 
 	#get a smoothed spectrum
 	def getSmoothedSpectrum(self, smoothFac):
-
 		interp = interpolate.splrep(smoothSpec.smooth(self.wavelengths, smoothFac), smoothSpec.smooth(self.spec, smoothFac))
 		lambdaNew = np.linspace(min(self.wavelengths), max(self.wavelengths), len(self.spec))
 		self.smoothSpec = interpolate.splev(lambdaNew, interp, der=0)
@@ -261,10 +262,7 @@ class spectrum():
 	#returns the best fit center of the line
 	def fitLine(self, peak, plotBool, subSpecN):
 		#how many wavelength points away from center we want to consider
-		#subSpecN = 15
 		#create subarrays from center +/- subSpecN points
-
-		
 		peak = peak[0]
 		subSpectra = self.spec[peak-subSpecN:peak+subSpecN]
 		subWavelengths = self.wavelengths[peak-subSpecN:peak+subSpecN]
@@ -283,8 +281,11 @@ class spectrum():
 
 		#the redshift will then be fit to the trough in the center
 		if doublePeaked:
+			#get an array of the indices of a sorted list
 			indexSort = doublePeaks.argsort()
+			#find the two highest peaks
 			maxs = [indexSort[-2], indexSort[-1]]
+			#find the index of the trough between the two max peaks
 			trough = self.spec[min(doublePeaks[maxs]):max(doublePeaks[maxs])].argmin()+min(doublePeaks[maxs])
 
 			#check if the trough is significantly below the peaks
@@ -299,6 +300,7 @@ class spectrum():
 		if (peak > subSpecN):
 			maxSpec = max(subSpectra)
 
+			#perform fit of gaussian
 			fitParam, fitCov = curve_fit(gauss, (subWavelengths-subWavelengths[subSpecN-1]), subSpectra/maxSpec)
 			#print out fit data
 			print("A = ", fitParam[0])
@@ -312,6 +314,7 @@ class spectrum():
 			self.lineConst = fitParam[3]
 			self.lineLinear = fitParam[4]
 
+			#calculate redshift
 			z = (fitParam[1]+subWavelengths[subSpecN-1])/LyA - 1
 
 			#create a plot of each spectrum and the fitted line.
@@ -320,51 +323,63 @@ class spectrum():
 				print("Checking to see if directory exists")
 				if not(os.path.isdir("./images/"+self.objName)):
 					os.makedirs("./images/"+self.objName)
+				#check if the feature is emission
 				if fitParam[0]>0:
 					plt.cla()
+					#plot the spectrum
 					plt.plot(self.wavelengths, self.spec)
+					#save a figure of the entire spectrum
 					plt.savefig("./images/"+self.objName+"/"+self.filename[0:-5]+"fullspec.png")
 					
+
 					plt.cla()
+					#plot the data near the LyA line
 					plt.plot(subWavelengths, subSpectra/maxSpec, linewidth=2)
+					#plot the best fit
 					plt.plot(subWavelengths, (subWavelengths-subWavelengths[subSpecN-1])*fitParam[4]+fitParam[3]+fitParam[0]*np.exp(-(subWavelengths-(fitParam[1]+subWavelengths[subSpecN-1]))**2/(2*fitParam[2]**2)), linewidth=2, label="z=%.3f" % z+"d"*doublePeaked)
 					plt.legend()
-
+					#save the figure of just the LyA line
 					plt.savefig("./images/"+self.objName+"/"+self.filename[0:-5]+"linespec.png")
 
+					#now save a copy of the images all together in one directory, prepended by the redshift
 					if not(os.path.isdir("./images/all/")):
 						os.makedirs("./images/all/")
 					plt.cla()
+					#plot the spectrum
 					plt.plot(self.wavelengths, self.spec)
+					#save the figure of the whole spectrum
 					plt.savefig("./images/all/{:6.4f}_".format(z)+self.filename[0:-5]+"_fullspec.png")
 					
 					plt.cla()
+					#plot the data around LyA
 					plt.plot(subWavelengths, subSpectra/maxSpec, linewidth=2)
+					#plot the fit of LyA
 					plt.plot(subWavelengths, (subWavelengths-subWavelengths[subSpecN-1])*fitParam[4]+fitParam[3]+fitParam[0]*np.exp(-(subWavelengths-(fitParam[1]+subWavelengths[subSpecN-1]))**2/(2*fitParam[2]**2)), linewidth=2, label="z=%.3f" % z+"d"*doublePeaked)
-					#plt.plot(subWavelengths, (subWavelengths-subWavelengths[subSpecN-1])*fitParam[4]+fitParam[3]+fitParam[0]*np.exp(-(subWavelengths-(fitParam[1]+subWavelengths[subSpecN-1]))**2/(2*fitParam[2]**2)) - subSpectra/maxSpec, 'r')
+
+					#if it is a double peak, we will plot additional things
 					if doublePeaked:
+						#plot the location of the trough
 						plt.plot([self.wavelengths[trough], self.wavelengths[trough]], [0,1], 'k')
+						#plot the position of the peaks in the LyA line
 						plt.plot(self.wavelengths[doublePeaks], self.spec[doublePeaks]/max(subSpectra), 'ko')
 
 					plt.legend()
-					width = 3*fitParam[2]
-					center = fitParam[1]+subWavelengths[subSpecN-1]
-					continuumWavelengths = subWavelengths.clip((center-width), (center+width))
-					continuumSpec = fitParam[3]+fitParam[4]*(continuumWavelengths-subWavelengths[subSpecN-1])
-
-					plt.plot(continuumWavelengths, continuumSpec, 'k', linewidth=2)
-
-					plt.plot([center+width, center+width], [0,1], 'k')
-					plt.plot([center-width, center-width], [0,1], 'k')
 					plt.xlim([subWavelengths[0], subWavelengths[-1]])
 
+					#save the figure with just the LyA line
 					plt.savefig("./images/all/{:6.4f}_".format(z)+"d"*doublePeaked+"_"+self.filename[0:-5]+"_linespec.png")
 
+			#if it is not double peaked, we will find the equivalent width
 			if not doublePeaked:
+				#This sets the width of the line to 3 sigma
 				width = 3*fitParam[2]
+				#this finds the center of the line
 				center = fitParam[1]+subWavelengths[subSpecN-1]
+				#calculate an array of wavelengths at the center +/- width
 				continuumWavelengths = subWavelengths.clip((center-width), (center+width))
+				#get the data in the same range
 				continuumSpec = fitParam[3]+fitParam[4]*(continuumWavelengths-subWavelengths[subSpecN-1])
+				#this is the fit to the continuum on the line
 				linSpec = self.spec[np.where(subWavelengths.clip(center-width, center+width)==continuumWavelengths)]
 
 				#find the equivalent width of LyA if not double peaked
@@ -372,11 +387,14 @@ class spectrum():
 				print("Calculated the equivalent width to be: {:5.3f} Angstroms".format(self.EW))
 				# if fitParam[0]<0:
 				# 	return -1*(fitParam[1]+subWavelengths[subSpecN-1])/LyA+1
+
+				#make sure this is not fitting any absorption noise features
 				if fitParam[0]>0:
 					return (fitParam[1]+subWavelengths[subSpecN-1])/LyA-1
 				else:
 					return -2
 			else:
+				#if the line id double peaked
 				return self.wavelengths[trough]/LyA - 1
 
 
@@ -391,6 +409,7 @@ class spectrum():
 		#zguess = self.wavelengths[peak[0]]/LyA-1
 		print("Zguess is ", zguess)
 
+		#this is how far away from a guess we want to check
 		absZthresh = 0.02
 
 		#create a list of redshifts to iterate over
@@ -400,9 +419,6 @@ class spectrum():
 
 		#for each iterative redshift
 		for z in zlist:
-			zstep += 1
-			sys.stdout.write("\rCalculating absorption redshift: |"+"-"*int(zstep/4)+"."*(25-int(zstep/4))+"|%d%%" % int(zstep))
-			sys.stdout.flush()
 			lineSpec = np.zeros(np.shape(self.fullspec)[0])
 
 			#for each metal line in our list, create a line and add it to our comparison spectrum
@@ -427,11 +443,10 @@ class spectrum():
 
 			plt.cla()
 			plt.plot(self.fullwavelengths, self.fullspec/max(self.spec))
+			#plot each of the absorption lines
 			for ii in range(len(lines*(absZ+1))):
 				peak = (lines*(absZ+1))[ii]
 				plt.plot([peak, peak], [-1, 1], 'r--', linewidth = 2)
-				#plt.plot([(lines*(zguess*(1-absZthresh)+1))[ii], (lines*(zguess*(1-absZthresh)+1))[ii]], [-1, 1], 'r', linewidth = .5)
-				#plt.plot([(lines*(zguess*(1+absZthresh)+1))[ii], (lines*(zguess*(1+absZthresh)+1))[ii]], [-1, 1], 'r', linewidth = .5)
 
 
 			plt.xlim([min(lines*(absZ+1)), max(lines*(absZ+1))])
@@ -442,19 +457,15 @@ class spectrum():
 				os.makedirs("./images/all/absorption/")
 			plt.cla()
 			plt.plot(self.fullwavelengths, self.fullspec/max(self.spec))
+			#plot each of the absorptoin lines
 			for ii in range(len(lines*(absZ+1))):
 				peak = (lines*(absZ+1))[ii]
 				plt.plot([peak, peak], [-1, 1], 'r--', linewidth = 2)
-				#plt.plot([(lines*(zguess*(1-absZthresh)+1))[ii], (lines*(zguess*(1-absZthresh)+1))[ii]], [-1, 1], 'r', linewidth = .5)
-				#plt.plot([(lines*(zguess*(1+absZthresh)+1))[ii], (lines*(zguess*(1+absZthresh)+1))[ii]], [-1, 1], 'r', linewidth = .5)
 
 
 			plt.xlim([min(lines*(absZ+1)), max(lines*(absZ+1))])
 			plt.ylim([-1, 1])
 			plt.savefig("./images/all/absorption/"+str(absZ)+"_"+self.filename[0:-5]+"_absorbspec.png")
-
-
-
 
 		return absZ
 
