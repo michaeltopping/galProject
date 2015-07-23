@@ -50,8 +50,8 @@ print("Done adding galaxy data to {} galaxies.".format(len(galaxies)))
 #define colormap
 cm = plt.get_cmap('seismic')
 peakmin = 3.06
-peakmax = 3.12
-peakLimit = 3.08
+peakmax = 3.11
+peakLimit = 3.077
 midPt = (peakLimit - peakmin) / (peakmax - peakmin)
 
 cdict = {'red':   ((0.0,  0.2, 0.0),
@@ -64,7 +64,7 @@ cdict = {'red':   ((0.0,  0.2, 0.0),
 
          'blue':  ((0.0,  1.0, 1.0),
                    (midPt,  1.0, 1.0),
-                   (1.0,  0.2, 0.0))}
+                   (1.0,  0.0, 0.0))}
 colorMap = LinearSegmentedColormap('BlueRed1', cdict)
 #loop through all galaxies
 for gal in galaxies:
@@ -79,12 +79,22 @@ for gal in galaxies:
 		#plot the galaxy
 		plt.scatter(galaxy.RA, galaxy.dec, vmin=peakmin, vmax=peakmax, c=galaxy.z, cmap=colorMap, s=100, marker = marker)
 
+
+
+
 #plotting parameters
 plt.colorbar().set_label("$z$", fontsize=16)
-plt.xlim([334.315, 334.42])
-plt.ylim([0.177,0.316])
+plt.xlim([334.310, 334.43])
+plt.ylim([0.175,0.325])
 plt.xlabel(r"$\rm Right \ Ascension \ [deg]$", fontsize=16)
 plt.ylabel(r'$\rm Declination \ [deg]$', fontsize=16)
+
+#create a legend
+plt.scatter(999, 999, marker='o', s=100, label="Red Peak", facecolors='none')
+plt.scatter(999, 999, marker='v', s=100, label="Blue Peak", facecolors='none')
+plt.legend()
+
+#display/save figure
 plt.savefig("scatter.png", dpi=400)
 plt.show()
 
