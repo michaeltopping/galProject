@@ -41,6 +41,13 @@ matplotlib.rc('font', **font)
 def gauss(wavelengths, a, center, sigma):
 	return a*np.exp(-(wavelengths-center)**2/(2*sigma**2))
 
+#define two gaussians
+def twoGauss(x, a1, c1, s1, a2, c2, s2):
+	if s1 ==0 or s2 == 0:
+		return 99999.9
+	else:
+		return a1*np.exp(-(x-c1)**2/(2*s1**2))+a2*np.exp(-(x-c2)**2/(2*s2**2))
+
 
 #define a base canvas class
 class PlotCanvas(FigureCanvas):
@@ -497,17 +504,34 @@ class ApplicationWindow(QMainWindow):
 			zs = np.append(zs, z)
 			abszs = np.append(abszs, absz)
 
+		#find histogram statistics/fits
+		hist, bin_edges = np.histogram(zs, bins=30, range=(3.05, 3.12))
+		#find the bin centers
+		bin_centers = [0.5*(bin_edges[ii]+bin_edges[ii+1]) for ii in range(len(bin_edges)-1)]
+		#find a fit to two gaussians
+		fitParam, fitCov = curve_fit(twoGauss, bin_centers, hist, p0 = np.array([10, 3.0675, 0.003, 14.8, 3.095, 0.005]))
+		x = np.linspace(3.05, 3.12, 200)
+		#this is by far the worst line of code I have ever written
+		print("Minimum between {} and {} two peaks: {}".format(x[75], x[120], x[np.where(twoGauss(x[50:100], fitParam[0],fitParam[1],fitParam[2],fitParam[3],fitParam[4],fitParam[5])==min(twoGauss(x[50:100], fitParam[0],fitParam[1],fitParam[2],fitParam[3],fitParam[4],fitParam[5])))[0]+50]))
+
+
 		#plot histogram
 		plt.cla()
 		#for emission and absorption
 		#plt.hist([zs, abszs], bins=500, range=(2, 3.5),histtype="step",color=['blue', 'red'],  stacked=False, linewidth=3 )
 		#for emission only
-		plt.hist(zs, bins=500, range=(2, 3.5), histtype="stepfilled" ,color='blue')
+		#plt.hist(zs, bins=500, range=(2, 3.5), histtype="stepfilled" ,color='blue')
+		plt.hist(zs, bins=30, range=(3.05, 3.12), histtype="stepfilled" ,color='blue')
+
+		#plt.plot(bin_centers, hist, 'k', linewidth=2)
+		plt.plot(x, twoGauss(x, fitParam[0],fitParam[1],fitParam[2],fitParam[3],fitParam[4],fitParam[5]), 'k', linewidth=2)
 		plt.xlabel("$z$")
 		plt.ylabel("$N$")
 		plt.xlim([3.05,3.12])
+		plt.ylim([0, max(hist)+1])
 		plt.savefig("histogram.png", dpi=300)
-#		plt.show()
+		plt.show()
+
 
 
 	# def displayCoords(self):
