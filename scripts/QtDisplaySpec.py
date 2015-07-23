@@ -29,6 +29,14 @@ LyA = 1215.67
 #logfile
 logfile = open("QtDisplaySpec.log", "w")
 
+#change font in plots
+font = {'family' : 'normal',
+        'weight' : 500,
+        'size'   : 18}
+
+matplotlib.rc('font', **font)
+
+
 #define a gaussian to fit to
 def gauss(wavelengths, a, center, sigma):
 	return a*np.exp(-(wavelengths-center)**2/(2*sigma**2))
@@ -390,7 +398,7 @@ class ApplicationWindow(QMainWindow):
 
 		#print out some data about the redshifts
 		print("Got ", zs.size, " Redshifts")
-		print("Got ", laezs.size, "LAE Redshifts"
+		print("Got ", laezs.size, "LAE Redshifts")
 		print("Got ", abszs.size, "Absorption Redshifts")
 
 		print("Found ", zs.size, " redshifts in ", time.time()-starttime, " seconds")
@@ -450,11 +458,17 @@ class ApplicationWindow(QMainWindow):
 	def writeData(self):
 		print("Writing galaxy data to 'output.dat'")
 		#open the file for writing
-		outputFile = open("output.dat", 'w')
+		outputFile = open("table.dat", 'w')
+		#write a header line
+		outputFile.write("ID             z_sys       z_em       z_abs      peak\n")
 		#go through the dictionary of galaxies
 		for gal, galObject in self.galaxies.items():
+			d = "s"
+			if 'd' in self.galaxies[gal].type:
+				d = "d"
+
 			#write a file with the name of an object, and redshift data
-			outputFile.write("{:11}   {:6.4f}    {}\n".format(gal, self.galaxies[gal].sysRedshift, self.galaxies[gal].emRedshifts))
+			outputFile.write("{:11}   {:6.4f}    {:6.4f}    {:6.4f}        {}\n".format(gal, self.galaxies[gal].sysRedshift, self.galaxies[gal].emRedshift, self.galaxies[gal].absRedshift, d))
 		outputFile.close()
 		print("Finished writing data")
 
@@ -482,17 +496,18 @@ class ApplicationWindow(QMainWindow):
 			#add the redshifts to a list
 			zs = np.append(zs, z)
 			abszs = np.append(abszs, absz)
-			
+
 		#plot histogram
 		plt.cla()
 		#for emission and absorption
 		#plt.hist([zs, abszs], bins=500, range=(2, 3.5),histtype="step",color=['blue', 'red'],  stacked=False, linewidth=3 )
 		#for emission only
 		plt.hist(zs, bins=500, range=(2, 3.5), histtype="stepfilled" ,color='blue')
-		plt.xlabel("z")
-		plt.ylabel("Number")
-		plt.xlim([3.0,3.15])
-		plt.show()
+		plt.xlabel("$z$")
+		plt.ylabel("$N$")
+		plt.xlim([3.05,3.12])
+		plt.savefig("histogram.png", dpi=300)
+#		plt.show()
 
 
 	# def displayCoords(self):

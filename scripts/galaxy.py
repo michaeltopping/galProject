@@ -22,11 +22,11 @@ class Galaxy():
 		self.emRedshifts = []
 		self.absRedshifts = []
 		self.type = []
-		self.sysRedshift = -2
+		self.sysRedshift = -9.9999
 
 
 	#change the redshift based on the type of spectral features it contains.
-	# shift data from Adelberger et al. 2003
+	# shift data from Adelberger et al. 2003, Trainor et al. 2015
 	def systemicShift(self):
 
 		#if the lyman alpha line is double peaked
@@ -35,11 +35,14 @@ class Galaxy():
 			self.sysRedshift = z
 
 		#if the galaxy has only LyA emission, and no absorption features.
-		#we want to shift it by 310km/s on average
+		#we want to shift it by 200m/s on average
 		elif (len(self.emRedshifts) > 0 and len(self.absRedshifts) == 0):
-			z = np.average(self.emRedshifts)
-			z -= (310./3e5)*(1+z)
-
+			if self.name.startswith("C") or self.name.startswith("D") or self.name.startswith("M") or self.name.startswith("MD"):
+				z = np.average(self.emRedshifts)
+				z -= (310./3e5)*(1+z)
+			else:
+				z = np.average(self.emRedshifts)
+				z -= (200./3e5)*(1+z)
 			self.sysRedshift = z
 
 
@@ -59,4 +62,11 @@ class Galaxy():
 
 		#if for some reason things don't work, this will happend
 		else:
-			self.sysRedshift = -2
+			self.sysRedshift = -9.9999
+
+		self.emRedshift = np.average(self.emRedshifts)
+		if np.isnan(self.emRedshift):
+			self.emRedshift = -9.9999
+		self.absRedshift = np.average(self.absRedshifts)
+		if np.isnan(self.absRedshift):
+			self.absRedshift = -9.9999

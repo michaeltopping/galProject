@@ -367,7 +367,7 @@ class spectrum():
 					plt.xlim([subWavelengths[0], subWavelengths[-1]])
 
 					#save the figure with just the LyA line
-					plt.savefig("./images/all/{:6.4f}_".format(z)+"d"*doublePeaked+"_"+self.filename[0:-5]+"_linespec.png")
+					plt.savefig("./images/all/{:6.4f}".format(z)+"d"*doublePeaked+"_"+self.filename[0:-5]+"_linespec.png")
 
 			#if it is not double peaked, we will find the equivalent width
 			if not doublePeaked:
