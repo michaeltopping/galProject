@@ -6,6 +6,14 @@ import random
 from mpl_toolkits.mplot3d import Axes3D
 from scipy import interpolate
 from matplotlib.colors import LinearSegmentedColormap
+from cosmology import *
+
+
+
+#Constants and conversions
+cmToMpc = 3.241e-25
+cmToGpc = 3.241e-28
+
 
 
 galaxies = {}
@@ -48,7 +56,6 @@ print("Done adding galaxy data to {} galaxies.".format(len(galaxies)))
 #-----Visualization-----
 #plot all of the positions in 2d
 #define colormap
-cm = plt.get_cmap('seismic')
 peakmin = 3.06
 peakmax = 3.11
 peakLimit = 3.077
@@ -66,6 +73,8 @@ cdict = {'red':   ((0.0,  0.2, 0.0),
                    (midPt,  1.0, 1.0),
                    (1.0,  0.0, 0.0))}
 colorMap = LinearSegmentedColormap('BlueRed1', cdict)
+midRA = 334.37
+midDec =0.2425
 #loop through all galaxies
 for gal in galaxies:
 	galaxy = galaxies[gal]
@@ -77,22 +86,19 @@ for gal in galaxies:
 	#make sure the galaxies are in the required range
 	if galaxy.z > 3.05 and galaxy.z < 3.12:
 		#plot the galaxy
-		plt.scatter(galaxy.RA, galaxy.dec, vmin=peakmin, vmax=peakmax, c=galaxy.z, cmap=colorMap, s=100, marker = marker)
+		plt.scatter(cmToMpc*DA(galaxy.RA-midRA), cmToMpc*DA(galaxy.dec-midDec), vmin=cmToGpc*DC(peakmin), vmax=cmToGpc*DC(peakmax), c=cmToGpc*DC(galaxy.z), cmap=colorMap, s=100, marker = marker)
 
 
 
 
 #plotting parameters
-plt.colorbar().set_label("$z$", fontsize=16)
-plt.xlim([334.310, 334.43])
-plt.ylim([0.175,0.325])
-plt.xlabel(r"$\rm Right \ Ascension \ [deg]$", fontsize=16)
-plt.ylabel(r'$\rm Declination \ [deg]$', fontsize=16)
+plt.colorbar().set_label(r"$\rm Comoving \ Distance \ [Gpc]$", fontsize=16)
+plotRange = 600
+plt.ylim([-plotRange/2.,plotRange/2.])
+plt.xlim([-plotRange/2.,plotRange/2.])
+plt.xlabel(r"$\rm Right \ Ascension \ [Mpc]$", fontsize=16)
+plt.ylabel(r'$\rm Declination \ [Mpc]$', fontsize=16)
 
-#create a legend
-plt.scatter(999, 999, marker='o', s=100, label="Red Peak", facecolors='none')
-plt.scatter(999, 999, marker='v', s=100, label="Blue Peak", facecolors='none')
-plt.legend()
 
 #display/save figure
 plt.savefig("scatter.png", dpi=400)
