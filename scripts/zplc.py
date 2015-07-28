@@ -86,18 +86,18 @@ for gal in galaxies:
 	#make sure the galaxies are in the required range
 	if galaxy.z > 3.05 and galaxy.z < 3.12:
 		#plot the galaxy
-		plt.scatter(cmToMpc*DA(galaxy.RA-midRA), cmToMpc*DA(galaxy.dec-midDec), vmin=cmToGpc*DC(peakmin), vmax=cmToGpc*DC(peakmax), c=cmToGpc*DC(galaxy.z), cmap=colorMap, s=100, marker = marker)
+		plt.scatter(cmToMpc*DC(galaxy.z)*(galaxy.RA-midRA)*(np.pi/180.), cmToMpc*DC(galaxy.z)*(galaxy.dec-midDec)*(np.pi/180.), vmin=cmToMpc*DC(peakmin)-cmToMpc*DC(peakLimit), vmax=cmToMpc*DC(peakmax)-cmToMpc*DC(peakLimit), c=cmToMpc*DC(galaxy.z)-cmToMpc*DC(peakLimit), cmap=colorMap, s=100, marker = marker)
 
 
 
 
 #plotting parameters
-plt.colorbar().set_label(r"$\rm Comoving \ Distance \ [Gpc]$", fontsize=16)
-plotRange = 600
+plt.colorbar().set_label(r"$\rm Relative \ Comoving \ Distance \ [Mpc]$", fontsize=16)
+plotRange = 16
 plt.ylim([-plotRange/2.,plotRange/2.])
 plt.xlim([-plotRange/2.,plotRange/2.])
-plt.xlabel(r"$\rm Right \ Ascension \ [Mpc]$", fontsize=16)
-plt.ylabel(r'$\rm Declination \ [Mpc]$', fontsize=16)
+plt.xlabel(r"$\rm Comoving \ Distance \ [Mpc]$", fontsize=16)
+plt.ylabel(r'$\rm Comoving \ Distance \ [Mpc]$', fontsize=16)
 
 
 #display/save figure
