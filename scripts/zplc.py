@@ -52,7 +52,7 @@ def dataInit():
 #-----Analysis-----
 
 #-----Visualization-----i
-def plot2d(galaxies):
+def plot2d(galaxies,peak):
     #plot all of the positions in 2d
     #define colormap
     peakmin = 3.06
@@ -83,7 +83,13 @@ def plot2d(galaxies):
         else:
             marker = 'v'
         #make sure the galaxies are in the required range
-        if galaxy.z > 3.05 and galaxy.z < 3.12:
+        if peak == 'b':
+            peakRange = [3.05, peakLimit]
+        elif peak == 'r':
+            peakRange = [peakLimit, 3.12]
+        else:
+            peakRange = [3.05, 3.12]
+        if galaxy.z > peakRange[0] and galaxy.z < peakRange[1]:
             #plot the galaxy
             plt.scatter(cmToMpc*DC(galaxy.z)*(galaxy.RA-midRA)*(np.pi/180.),
              cmToMpc*DC(galaxy.z)*(galaxy.dec-midDec)*(np.pi/180.),
@@ -100,12 +106,12 @@ def plot2d(galaxies):
     plotRange = 16
     plt.ylim([-plotRange/2.,plotRange/2.])
     plt.xlim([-plotRange/2.,plotRange/2.])
-    plt.xlabel(r"$\rm Comoving \ Distance \ [Mpc]$", fontsize=16)
-    plt.ylabel(r'$\rm Comoving \ Distance \ [Mpc]$', fontsize=16)
+    plt.xlabel(r"$\rm Comoving \ Mpc$", fontsize=16)
+    plt.ylabel(r'$\rm Comoving \ Mpc$', fontsize=16)
 
 
     #display/save figure
-    plt.savefig("scatter.png", dpi=400)
+#    plt.savefig("scatter.png", dpi=400)
     plt.show()
 
 
@@ -171,7 +177,12 @@ if __name__=="__main__":
         if char=='q':
             break
         if char=='2':
-            plot2d(galaxies)
+            print("Which peak to plot?")
+            print("  r: red peak")
+            print("  b: blue peak")
+            print("  d: both peaks")
+            peak = input(":")
+            plot2d(galaxies, peak)
         if char=='3':
             movieBool = input("Create Movie? (y/n)") is 'y'
             plot3d(galaxies, movieBool)
