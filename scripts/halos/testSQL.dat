@@ -1,0 +1,449 @@
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-15">
+    <meta name="keywords" content="astronomy, astrophysics, virtual observatory">
+    <script language='JavaScript' src='/Millennium/js/util.js'></script>
+    <script language='JavaScript' src='/Millennium/pages/metadataQueries.js'></script>
+    <script language='JavaScript' src='/Millennium/pages/demoQueries.js'></script>
+
+  <link rel="StyleSheet" href="/Millennium/js/tree/dtree.css" type="text/css" />
+	<script type="text/javascript" src="/Millennium/js/tree/dtree.js"></script>
+<!-- body -->
+
+<!-- extract local variable 
+  due to not understood behaviour of jsp:usebean when there is no session,
+    extract the gavoSession explicitly
+-->
+
+
+
+<script type="text/javascript">
+var currentQuery;
+var queryCount = 0;
+var previousQueries = new Array();
+
+function setSQL(index)
+{
+var s2=document.getElementById("SQL");
+s2.value=previousQueries[index];
+}
+
+function getText()
+{
+var x=document.getElementById("PreviousQueries")
+setSQL(x.options[x.selectedIndex].value);
+}
+function setMode(mode)
+{
+var y=document.getElementById("action123")
+y.value='doQuery';
+var x=document.getElementById("queryMode")
+x.value=mode;
+if(mode == 'stream')
+{
+  document.forms[0].target='_blank'
+}
+else
+{
+  document.forms[0].target='_self'
+}
+document.forms[0].submit();
+}
+function setExplain()
+{
+var x=document.getElementById("action123")
+x.value='doExplain';
+document.forms[0].target='_blank'
+document.forms[0].submit();
+}
+function setBatch()
+{
+setMode('web');
+var x=document.getElementById("batchMode")
+x.value='true';
+document.forms[0].target='_blank'
+document.forms[0].submit();
+}
+
+function initialize()
+{
+
+  currentQuery = 0;
+
+}
+</script>
+
+  <link type='text/css' rel='stylesheet' href='/Millennium/css/simpledb-style.css'> 
+  <title>Millennium Simulations - Databases</title>
+
+</head> 
+<body class='body' onLoad="initialize()">
+
+    <table class='structure' width='100%'>
+  <tr valign="top" style="height:70;background-image:url('/Millennium/images/newstrip_inv_lighter_title.jpg');">
+    <td class='title' valign="top" style='color:dark-blue;'>&nbsp;
+<!-- 
+      <img src='/Millennium/images/transparent.gif' width='150' height='70'>Millennium&nbsp;Run&nbsp;Database</td>
+ -->      
+    </tr>
+    <tr>
+      <!-- cell 3,2 ... 3,3 -->
+      <!-- orange ruler -->
+      <td style='padding: 0pt'> 
+        <div style='background-color: rgb(226,143,110); font-size: 4pt; margin: 2pt; padding: 0pt; border: none'>
+          &nbsp;
+        </div> 
+      </td>
+     </tr>
+    </table> 
+    <hr/>   
+
+
+    <table class='dialogue' >
+      <tr>
+<!--   <td valign='top' width='175px' style='white-space: nowrap;background-color:rgb(210, 220, 240);color:dark blue;' > -->
+<!-- <td valign='top' width='175px' style='white-space: nowrap;background-color:rgb(220,250,230);color:dark blue;' > -->
+<td valign='top' style='white-space: nowrap;background-color:rgb(218,228,237);color:dark blue;' >
+<div style='white-space: nowrap;color:dark blue;'> 
+ 
+
+
+
+
+<div class="submenuvertical">
+<a class='menu' href='/Millennium/Help' target='_blank'>Documentation</a><br><br>
+<a class='menu' href='/Millennium/Help?page=credits' target='_blank'>CREDITS/Acknowledgments</a><br><br>
+<a class='menu' href='/Millennium/Help?page=registration' target='_blank'>Registration</a><br><br>
+<a class='menu' href='/Millennium/Help?page=news' target='_blank'>News</a><br><br>
+<a class='menu' href='/Millennium/Help?page=faq' target='_blank'>FAQ</a><br><br>
+</div>
+<div class="dtree">
+
+<!-- 
+<a href="javascript: d.opnAll();">open all</a> | <a href="javascript: d.closeAll();">close all</a>
+ -->
+<script type="text/javascript">
+		<!--
+
+		d = new dTree('d','/Millennium/js/tree/');
+
+		d.add(0,-1,' Databases ','/Millennium/Help?page=publicdbs');
+
+
+		d.add(1,0,'millimil (context)','/Millennium/Help?page=databases/millimil/database');
+		
+
+		d.add(2,1,' Tables','','','','','');
+		
+
+
+		d.add(3,2,' Bower2006a','/Millennium/Help?page=databases/millimil/bower2006a');
+
+		d.add(4,2,' DeLucia2006a','/Millennium/Help?page=databases/millimil/delucia2006a');
+
+		d.add(5,2,' DeLucia2006a_sdss2mass','/Millennium/Help?page=databases/millimil/delucia2006a_sdss2mass');
+
+		d.add(6,2,' DHalo','/Millennium/Help?page=databases/millimil/dhalo');
+
+		d.add(7,2,' DSubhalo','/Millennium/Help?page=databases/millimil/dsubhalo');
+
+		d.add(8,2,' Guo2010a','/Millennium/Help?page=databases/millimil/guo2010a');
+
+		d.add(9,2,' MMField','/Millennium/Help?page=databases/millimil/mmfield');
+
+		d.add(10,2,' MPAHalo','/Millennium/Help?page=databases/millimil/mpahalo');
+
+		d.add(11,2,' Snapshots','/Millennium/Help?page=databases/millimil/snapshots');
+
+  
+
+		document.write(d);
+
+		//-->
+	</script>
+
+</div>
+
+
+
+<br><br>
+<img src='/Millennium/images/transparent.gif' width='20'>
+<a href='http://www.mpa-garching.mpg.de' target='_blank'>
+  <img src='/Millennium/images/mpaLogoG.gif' border='0'>
+</a><br><br>
+<img src='/Millennium/images/transparent.gif' width='20'>
+<a href='http://www.virgo.dur.ac.uk/new/index.php' target='_blank'>
+  <img src='/Millennium/images/Virgologo.gif' border='0'>
+</a><br><br>
+<img src='/Millennium/images/transparent.gif' width='20'>
+<a href='http://www.g-vo.org' target='_blank'>
+  <img src='/Millennium/images/GavoLogo060NG.png' border='0'>
+</a>
+
+
+</div>
+</td>
+<td valign='top' class='td_s' width='20px''>
+  <img src='/Millennium/images/transparent.gif' width='20'/><br>
+</td>
+<td class='td_s' valign='top'> 
+<!-- 
+<b>
+In honour of reaching <a href="http://gavo.mpa-garching.mpg.de/millennium" target="_blank">500 publications</a>
+using Millennium related data, we are organising a workshop end of this year.<br/>
+Please read the workshop announcement <a href="http://gavo.mpa-garching.mpg.de/Millennium/Workshop2012.jsp">here</a>,
+which includes information about pre-registration possibilities. </b>
+<br/>
+<hr/>
+ -->
+  
+
+Streaming queries return  
+unlimited number of rows in CSV format and are cancelled after 30 seconds.<br>
+Browser queries return 
+maximum of 1000
+rows in HTML format and are cancelled after 30 seconds.<br>
+
+<form method="post" action="/Millennium/MyDB" id="query" name="SimulationsQueryForm" target="_self">
+<input type='hidden' id="action123" name='action' value='doQuery'>
+<input type='hidden' id="queryMode" name='queryMode' value='stream'>
+<input type='hidden' id="batchMode" name='batch' value='false'>
+<table class='dialogue'>
+  <tr>
+    <td> 
+      
+      <textarea name="SQL" id="SQL" rows="20" cols="80">select DES.haloId as descendant_id,    
+       DES.np as descendant_mass,    
+       PROG.*    
+  from millimil..MPAHalo DES,    
+       millimil..MPAHalo PROG    
+ where DES.snapnum = 63    
+   and DES.np > 1e5    
+   and PROG.haloId between DES.haloId and DES.lastprogenitorId    
+   and PROG.redshift between 3.05 and 3.12    
+   and PROG.np > 100    
+ order by DES.np desc, PROG.np desc</textarea>
+      <br>
+      Maximum number of rows to return to the query form: &nbsp;
+   <select name='MAXROWS'>
+<option value='-1'>ALL</option>
+<option value='10' selected>10</option>
+<option value='100'>100</option>
+<option value='1000'>1000</option>
+      
+</select>
+    </td>
+    <td>
+      <input type="button" name="doQueryStream" value="Query (stream)" style="width:110px" onClick="setMode('stream')"><br><br>
+      <input type="button" name="doQuery" value="Query (browser)" style="width:110px" onClick="setMode('web')"><br><br>
+
+
+      <input type="button" name="help" value="Help" style="width:110px" onClick='window.open("/Millennium/Help?page=webinterface#screenshots")' >
+    </td>
+  </tr>
+</table>
+  
+
+<br><br>
+<b><a href="/Millennium/Help?page=demo/overview">Demo queries</a></b>: 
+click a button and the query will show in the query window. <br>
+Holding the mouse over the button will give a short explanation of the goal of the query.
+These queries are described in some more detail on <a href="/Millennium/Help?page=demo/genericqueries">this page</a>.<br><br>
+<table class='dialogue'>
+  <tr>
+    <td>Mainly Halos:</td>
+    <td> 
+     <span title='Find halos at a given redshift (snapnum) within a certain part of the simulation volume (X,Y,Z) ' class='popup'>
+        <input type="button" name="btn1" value="H 1" style="width:40px" onClick="return ChangeText(this.form, 'h1')" >
+     </span>
+    </td>
+    <td>
+     <span title='Find the whole progenitor tree, in depth-first order, of a halo identified by its haloId' class='popup'>
+      <input type="button" name="btn2" value="H 2"  style="width:40px" onClick="return ChangeText(this.form, 'h2')" >
+     </span>
+    </td>
+    <td>
+      <span title='Find the progenitors at a given redshift (snapnum) of all halos of mass(np)&ge;4000 at a later redshift (snapnum). The progenitors are limited in mass as well.' class='popup'>
+        <input type="button" name="btn3" value="H 3"  style="width:40px" onClick="return ChangeText(this.form, 'h3')" >
+      </span>
+    </td>
+    <td>
+      <span title='Find all the halos of mass &ge; 1000 that have just had a major merger, defined by having at least two progenitors of mass &ge; 0.2*descendant mass.' class='popup'> 
+      <input type="button" name="btn4" value="H 4"  style="width:40px" onClick="return ChangeText(this.form, 'h4')" >
+      </span>
+    </td>
+    <td>
+      <span title='Find the mass function of halos at z=0 using logarithmic intervals.' class='popup'>
+        <input type="button" name="btn5" value="H 5"  style="width:40px" onClick="return ChangeText(this.form, 'h5')" >
+      </span>
+    </td>
+    <td>
+      <span title='Find all halos residing in background overdensities between 2 and 3, at Gaussian smoothing radius 5 Mpc/h.' class='popup'>
+        <input type="button" name="btnHF1" value="HF 1" style="width:40px"  onClick="return ChangeText(this.form, 'hf1')" >
+      </span>
+    </td>
+    <td>
+      <span title='Find halo mass functions in overdensities at two different values.' class='popup'>
+        <input type="button" name="btnHF2" value="HF 2" style="width:40px"  onClick="return ChangeText(this.form, 'hf2')" >
+      </span>
+    </td>
+    <td>
+      <span title='Find formation time dependency on background overdensities for halos in particular mass bin.' class='popup'>
+        <input type="button" name="btnHF3" value="HF 3" style="width:40px"  onClick="return ChangeText(this.form, 'hf3')" >
+      </span>
+    </td>
+    <td></td>
+  </tr>
+  <tr>
+    <td>Mainly Galaxies:</td>
+    <td> 
+     <span title='Find galaxies at a given redshift (snapnum) within a certain part of the simulation volume (X,Y,Z) ' class='popup'>
+      <input type="button" name="btnG1" value="G 1" style="width:40px"  onClick="return ChangeText(this.form, 'g1')" >
+     </span>
+    </td>
+    <td>
+     <span title='Find the whole progenitor tree, in depth-first order, of a galaxy identified by its galaxyId' class='popup'>
+       <input type="button" name="btnG2" value="G 2" style="width:40px"  onClick="return ChangeText(this.form, 'g2')" > 
+     </span>
+    </td>
+    <td>
+      <span title='Find the progenitors at a given redshift (snapnum) of all galaxies of brightness(magB) &le; -20 at a later redshift (snapnum). The progenitors are limited in magnitude as well.' class='popup'>
+      <input type="button" name="btnG3" value="G 3"  style="width:40px" onClick="return ChangeText(this.form, 'g3')" >
+      </span>
+    </td>
+    <td>
+      <span title='Find all the galaxies of mag_b &lt; -20 that have just had a major merger, defined by having at least two progenitors of mass &ge; 0.2*descendant mass.' class='popup'> 
+       <input type="button" name="btnG4" value="G 4" style="width:40px"  onClick="return ChangeText(this.form, 'g4')" >
+     </span>
+    </td>
+    <td>
+      <span title='Find the luminosity function of galaxies at z=0.' class='popup'>
+        <input type="button" name="btnG5" value="G 5"  style="width:40px" onClick="return ChangeText(this.form, 'g5')" >
+      </span>
+    </td>
+    <td>
+      <span title='Find the Tully-Fisher relation, Mag vs Vvir for galaxies with bulge/total mass ratio &lt; 0.1.'>
+        <input type="button" name="btnG6" value="G 6"  style="width:40px" onClick="return ChangeText(this.form, 'g6')" >
+      </span>
+    </td>
+    <td>
+      <span title='Find the conditional luminosity functions for galaxies in two ranges of halo masses' class='popup'>
+        <input type="button" name="btnHG1" value="HG 1"  style="width:40px" onClick="return ChangeText(this.form, 'hg1')" >
+      </span>
+    </td>
+    <td>
+      <span title='Find average galaxy properties as function of halo mass.' class='popup'>
+        <input type="button" name="btnHG2" value="HG 2"  style="width:40px" onClick="return ChangeText(this.form, 'hg2')" >
+      </span>
+    </td>
+    <td>
+      <span title='Find galaxy luminosity  functions in overdensities at two different values.' class='popup'>
+        <input type="button" name="btnGF2" value="GF 2"  style="width:40px" onClick="return ChangeText(this.form, 'gf2')" >
+      </span>
+    </td>
+  </tr>
+</table>
+
+
+</form>
+<!--  
+  </td>
+ </tr>
+</table>
+ -->
+<hr/>   
+
+<div><!-- style='padding:20px' --> 
+  <br><br>
+Query time (in millisec) = 12<br>Number of rows retrieved from database = 127 <br><br>
+<table class='dialogue'>
+<tr>
+<form method="post" action="/Millennium/MyDB" id="query" name="SimulationsQueryForm" target='_blank'>
+  <input type="hidden" id="action" name='action' value='reformat'>
+<td>
+  <input type="submit" id="reformat" value='Reformat' style="width:110px"/>
+</td><td>
+  <select name='format'>
+    <option value='cvs' selected>CSV</option>
+    <option value='bar' >| separated</option>
+    <option value='tab' >Tab separated</option>
+    <option value='blank'>Blank separated</option>
+    <option value='votable'>VOTable</option>
+  </select>
+</td>
+</form>
+<td>&nbsp;&nbsp;&nbsp;</td>
+<form method="post" action="/Millennium/MyDB" id="query" name="SimulationsQueryForm" target='_blank'>
+  <input type="hidden" id="action" name='action' value='voplot'>
+<td>
+  <input type="submit" id="plot" value='Plot (VOPlot)' style="width:110px"/>
+</td>
+</form>
+</tr>
+</table>
+<br>
+<style>
+  th, td {padding: 4px}
+  .table {background-color: #EEF3FB}
+  .header {background-color: rgb(220,220,220); vertical-align: top}
+  .body {background-color: rgb(255,255,255)}
+  .evenrow {background-color: white}
+  .oddrow {background-color: rgb(200,220,240)}
+  .evencol {background-color: #FFFFFF}
+  .oddcol {background-color: rgb(220,220,220)}
+  .left {text-align: left}
+  .right {text-align: right}
+  .footer {}
+</style>
+<table border='1' style='font-family: Arial, Helvetica, sans-serif; font-size: 9pt; border: 1px solid rgb(192,192,192); border-collapse: collapse;'>
+  <thead class='header'>
+    <tr>
+      <th>descendant_id</th> <th>descendant_mass</th> <th>haloID</th> <th>subHaloID</th> <th>lastProgenitorId</th> <th>treeId</th> <th>snapNum</th> <th>redshift</th> <th>firstProgenitorId</th> <th>nextProgenitorId</th> <th>descendantId</th> <th>firstHaloInFOFgroupId</th> <th>nextHaloInFOFgroupId</th> <th>np</th> <th>m_Mean200</th> <th>m_Crit200</th> <th>m_TopHat</th> <th>phKey</th> <th>x</th> <th>y</th> <th>z</th> <th>zIndex</th> <th>ix</th> <th>iy</th> <th>iz</th> <th>velX</th> <th>velY</th> <th>velZ</th> <th>velDisp</th> <th>vMax</th> <th>spinX</th> <th>spinY</th> <th>spinZ</th> <th>mostBoundID</th> <th>fileNr</th> <th>subhaloIndex</th> <th>halfmassRadius</th> <th>random</th>
+    </tr>
+  </thead>
+  <tbody nowrap style='text-align: right;'>
+    <tr class='evenRow'>
+      <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>137272</td> <td nowrap style='text-align: left;'>3000042000273</td> <td nowrap style='text-align: left;'>27000300000043</td> <td nowrap style='text-align: left;'>3000042000364</td> <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>27</td> <td nowrap style='text-align: left;'>3.060419</td> <td nowrap style='text-align: left;'>3000042000274</td> <td nowrap style='text-align: left;'>3000042000365</td> <td nowrap style='text-align: left;'>3000042000272</td> <td nowrap style='text-align: left;'>3000042000273</td> <td nowrap style='text-align: left;'>3000042000376</td> <td nowrap style='text-align: left;'>2629</td> <td nowrap style='text-align: left;'>241.24208</td> <td nowrap style='text-align: left;'>238.48798</td> <td nowrap style='text-align: left;'>246.49208</td> <td nowrap style='text-align: left;'>13531</td> <td nowrap style='text-align: left;'>45.01804</td> <td nowrap style='text-align: left;'>11.595258</td> <td nowrap style='text-align: left;'>11.119467</td> <td nowrap style='text-align: left;'>36478</td> <td nowrap style='text-align: left;'>5</td> <td nowrap style='text-align: left;'>1</td> <td nowrap style='text-align: left;'>1</td> <td nowrap style='text-align: left;'>122.25628</td> <td nowrap style='text-align: left;'>100.12626</td> <td nowrap style='text-align: left;'>95.87005</td> <td nowrap style='text-align: left;'>222.68246</td> <td nowrap style='text-align: left;'>361.81927</td> <td nowrap style='text-align: left;'>-0.6631244</td> <td nowrap style='text-align: left;'>0.50543517</td> <td nowrap style='text-align: left;'>0.275245</td> <td nowrap style='text-align: left;'>8128916</td> <td nowrap style='text-align: left;'>3</td> <td nowrap style='text-align: left;'>43</td> <td nowrap style='text-align: left;'>0.04078811</td> <td nowrap style='text-align: left;'>786</td>
+    </tr>
+    <tr class='oddRow'>
+      <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>137272</td> <td nowrap style='text-align: left;'>3000042000114</td> <td nowrap style='text-align: left;'>27000300000062</td> <td nowrap style='text-align: left;'>3000042000170</td> <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>27</td> <td nowrap style='text-align: left;'>3.060419</td> <td nowrap style='text-align: left;'>3000042000115</td> <td nowrap style='text-align: left;'>-1</td> <td nowrap style='text-align: left;'>3000042000113</td> <td nowrap style='text-align: left;'>3000042000114</td> <td nowrap style='text-align: left;'>3000042000173</td> <td nowrap style='text-align: left;'>1984</td> <td nowrap style='text-align: left;'>206.47154</td> <td nowrap style='text-align: left;'>202.3404</td> <td nowrap style='text-align: left;'>212.66827</td> <td nowrap style='text-align: left;'>13531</td> <td nowrap style='text-align: left;'>45.955387</td> <td nowrap style='text-align: left;'>11.650171</td> <td nowrap style='text-align: left;'>10.782185</td> <td nowrap style='text-align: left;'>36479</td> <td nowrap style='text-align: left;'>5</td> <td nowrap style='text-align: left;'>1</td> <td nowrap style='text-align: left;'>1</td> <td nowrap style='text-align: left;'>-74.31513</td> <td nowrap style='text-align: left;'>120.702614</td> <td nowrap style='text-align: left;'>107.831535</td> <td nowrap style='text-align: left;'>191.19733</td> <td nowrap style='text-align: left;'>304.53952</td> <td nowrap style='text-align: left;'>-0.78388804</td> <td nowrap style='text-align: left;'>-1.436823</td> <td nowrap style='text-align: left;'>2.1602104</td> <td nowrap style='text-align: left;'>8124975</td> <td nowrap style='text-align: left;'>3</td> <td nowrap style='text-align: left;'>62</td> <td nowrap style='text-align: left;'>0.04107018</td> <td nowrap style='text-align: left;'>272</td>
+    </tr>
+    <tr class='evenRow'>
+      <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>137272</td> <td nowrap style='text-align: left;'>3000042001123</td> <td nowrap style='text-align: left;'>27000300000093</td> <td nowrap style='text-align: left;'>3000042001186</td> <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>27</td> <td nowrap style='text-align: left;'>3.060419</td> <td nowrap style='text-align: left;'>3000042001124</td> <td nowrap style='text-align: left;'>-1</td> <td nowrap style='text-align: left;'>3000042001122</td> <td nowrap style='text-align: left;'>3000042001123</td> <td nowrap style='text-align: left;'>-1</td> <td nowrap style='text-align: left;'>1878</td> <td nowrap style='text-align: left;'>153.36902</td> <td nowrap style='text-align: left;'>148.72148</td> <td nowrap style='text-align: left;'>158.7051</td> <td nowrap style='text-align: left;'>13103</td> <td nowrap style='text-align: left;'>47.945595</td> <td nowrap style='text-align: left;'>13.115559</td> <td nowrap style='text-align: left;'>10.047883</td> <td nowrap style='text-align: left;'>40099</td> <td nowrap style='text-align: left;'>5</td> <td nowrap style='text-align: left;'>1</td> <td nowrap style='text-align: left;'>1</td> <td nowrap style='text-align: left;'>-210.16353</td> <td nowrap style='text-align: left;'>-114.35704</td> <td nowrap style='text-align: left;'>384.7876</td> <td nowrap style='text-align: left;'>201.35098</td> <td nowrap style='text-align: left;'>327.08636</td> <td nowrap style='text-align: left;'>0.802156</td> <td nowrap style='text-align: left;'>-0.7417013</td> <td nowrap style='text-align: left;'>0.3608718</td> <td nowrap style='text-align: left;'>7979952</td> <td nowrap style='text-align: left;'>3</td> <td nowrap style='text-align: left;'>93</td> <td nowrap style='text-align: left;'>0.03270498</td> <td nowrap style='text-align: left;'>606</td>
+    </tr>
+    <tr class='oddRow'>
+      <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>137272</td> <td nowrap style='text-align: left;'>3000042004846</td> <td nowrap style='text-align: left;'>27000300000097</td> <td nowrap style='text-align: left;'>3000042004889</td> <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>27</td> <td nowrap style='text-align: left;'>3.060419</td> <td nowrap style='text-align: left;'>3000042004847</td> <td nowrap style='text-align: left;'>3000042004890</td> <td nowrap style='text-align: left;'>3000042004845</td> <td nowrap style='text-align: left;'>3000042004846</td> <td nowrap style='text-align: left;'>3000042004900</td> <td nowrap style='text-align: left;'>1583</td> <td nowrap style='text-align: left;'>144.4182</td> <td nowrap style='text-align: left;'>141.49196</td> <td nowrap style='text-align: left;'>152.76657</td> <td nowrap style='text-align: left;'>13507</td> <td nowrap style='text-align: left;'>45.576687</td> <td nowrap style='text-align: left;'>7.9377728</td> <td nowrap style='text-align: left;'>12.069793</td> <td nowrap style='text-align: left;'>36680</td> <td nowrap style='text-align: left;'>5</td> <td nowrap style='text-align: left;'>0</td> <td nowrap style='text-align: left;'>1</td> <td nowrap style='text-align: left;'>-29.657501</td> <td nowrap style='text-align: left;'>362.31882</td> <td nowrap style='text-align: left;'>-11.508722</td> <td nowrap style='text-align: left;'>186.65517</td> <td nowrap style='text-align: left;'>289.1903</td> <td nowrap style='text-align: left;'>-0.98749006</td> <td nowrap style='text-align: left;'>2.0747607</td> <td nowrap style='text-align: left;'>0.9912162</td> <td nowrap style='text-align: left;'>8106287</td> <td nowrap style='text-align: left;'>3</td> <td nowrap style='text-align: left;'>97</td> <td nowrap style='text-align: left;'>0.035464972</td> <td nowrap style='text-align: left;'>486</td>
+    </tr>
+    <tr class='evenRow'>
+      <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>137272</td> <td nowrap style='text-align: left;'>3000042000036</td> <td nowrap style='text-align: left;'>27000300000103</td> <td nowrap style='text-align: left;'>3000042000063</td> <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>27</td> <td nowrap style='text-align: left;'>3.060419</td> <td nowrap style='text-align: left;'>3000042000037</td> <td nowrap style='text-align: left;'>-1</td> <td nowrap style='text-align: left;'>3000042000035</td> <td nowrap style='text-align: left;'>3000042000036</td> <td nowrap style='text-align: left;'>3000042000078</td> <td nowrap style='text-align: left;'>1570</td> <td nowrap style='text-align: left;'>153.02477</td> <td nowrap style='text-align: left;'>150.87312</td> <td nowrap style='text-align: left;'>157.24197</td> <td nowrap style='text-align: left;'>13520</td> <td nowrap style='text-align: left;'>46.79046</td> <td nowrap style='text-align: left;'>11.81897</td> <td nowrap style='text-align: left;'>10.739699</td> <td nowrap style='text-align: left;'>36585</td> <td nowrap style='text-align: left;'>5</td> <td nowrap style='text-align: left;'>1</td> <td nowrap style='text-align: left;'>1</td> <td nowrap style='text-align: left;'>-270.0379</td> <td nowrap style='text-align: left;'>84.23612</td> <td nowrap style='text-align: left;'>268.84583</td> <td nowrap style='text-align: left;'>191.24255</td> <td nowrap style='text-align: left;'>303.7295</td> <td nowrap style='text-align: left;'>0.35640696</td> <td nowrap style='text-align: left;'>0.42903313</td> <td nowrap style='text-align: left;'>-0.47643268</td> <td nowrap style='text-align: left;'>7865267</td> <td nowrap style='text-align: left;'>3</td> <td nowrap style='text-align: left;'>103</td> <td nowrap style='text-align: left;'>0.032128982</td> <td nowrap style='text-align: left;'>308</td>
+    </tr>
+    <tr class='oddRow'>
+      <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>137272</td> <td nowrap style='text-align: left;'>3000042000856</td> <td nowrap style='text-align: left;'>27000300000112</td> <td nowrap style='text-align: left;'>3000042000893</td> <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>27</td> <td nowrap style='text-align: left;'>3.060419</td> <td nowrap style='text-align: left;'>3000042000857</td> <td nowrap style='text-align: left;'>3000042000894</td> <td nowrap style='text-align: left;'>3000042000855</td> <td nowrap style='text-align: left;'>3000042000856</td> <td nowrap style='text-align: left;'>3000042000894</td> <td nowrap style='text-align: left;'>1498</td> <td nowrap style='text-align: left;'>113.77882</td> <td nowrap style='text-align: left;'>111.71324</td> <td nowrap style='text-align: left;'>118.42636</td> <td nowrap style='text-align: left;'>13507</td> <td nowrap style='text-align: left;'>45.491516</td> <td nowrap style='text-align: left;'>9.731267</td> <td nowrap style='text-align: left;'>11.792168</td> <td nowrap style='text-align: left;'>36682</td> <td nowrap style='text-align: left;'>5</td> <td nowrap style='text-align: left;'>1</td> <td nowrap style='text-align: left;'>1</td> <td nowrap style='text-align: left;'>-39.430782</td> <td nowrap style='text-align: left;'>251.9458</td> <td nowrap style='text-align: left;'>-86.58263</td> <td nowrap style='text-align: left;'>170.20508</td> <td nowrap style='text-align: left;'>281.33127</td> <td nowrap style='text-align: left;'>-0.56455517</td> <td nowrap style='text-align: left;'>0.4136634</td> <td nowrap style='text-align: left;'>1.0184141</td> <td nowrap style='text-align: left;'>8112010</td> <td nowrap style='text-align: left;'>3</td> <td nowrap style='text-align: left;'>112</td> <td nowrap style='text-align: left;'>0.036010142</td> <td nowrap style='text-align: left;'>941</td>
+    </tr>
+    <tr class='evenRow'>
+      <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>137272</td> <td nowrap style='text-align: left;'>3000042005065</td> <td nowrap style='text-align: left;'>27000300000078</td> <td nowrap style='text-align: left;'>3000042005104</td> <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>27</td> <td nowrap style='text-align: left;'>3.060419</td> <td nowrap style='text-align: left;'>3000042005066</td> <td nowrap style='text-align: left;'>3000042005105</td> <td nowrap style='text-align: left;'>3000042005064</td> <td nowrap style='text-align: left;'>3000042005065</td> <td nowrap style='text-align: left;'>3000042005193</td> <td nowrap style='text-align: left;'>1340</td> <td nowrap style='text-align: left;'>106.463234</td> <td nowrap style='text-align: left;'>104.0534</td> <td nowrap style='text-align: left;'>111.71324</td> <td nowrap style='text-align: left;'>13562</td> <td nowrap style='text-align: left;'>42.77101</td> <td nowrap style='text-align: left;'>9.927259</td> <td nowrap style='text-align: left;'>12.043659</td> <td nowrap style='text-align: left;'>36633</td> <td nowrap style='text-align: left;'>4</td> <td nowrap style='text-align: left;'>1</td> <td nowrap style='text-align: left;'>1</td> <td nowrap style='text-align: left;'>99.1837</td> <td nowrap style='text-align: left;'>221.20183</td> <td nowrap style='text-align: left;'>-15.369248</td> <td nowrap style='text-align: left;'>160.63475</td> <td nowrap style='text-align: left;'>239.60042</td> <td nowrap style='text-align: left;'>-0.11306408</td> <td nowrap style='text-align: left;'>0.31936216</td> <td nowrap style='text-align: left;'>0.98198813</td> <td nowrap style='text-align: left;'>8130893</td> <td nowrap style='text-align: left;'>3</td> <td nowrap style='text-align: left;'>78</td> <td nowrap style='text-align: left;'>0.044663515</td> <td nowrap style='text-align: left;'>385</td>
+    </tr>
+    <tr class='oddRow'>
+      <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>137272</td> <td nowrap style='text-align: left;'>3000042003040</td> <td nowrap style='text-align: left;'>27000300000131</td> <td nowrap style='text-align: left;'>3000042003088</td> <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>27</td> <td nowrap style='text-align: left;'>3.060419</td> <td nowrap style='text-align: left;'>3000042003041</td> <td nowrap style='text-align: left;'>3000042003089</td> <td nowrap style='text-align: left;'>3000042003039</td> <td nowrap style='text-align: left;'>3000042003040</td> <td nowrap style='text-align: left;'>3000042003091</td> <td nowrap style='text-align: left;'>1290</td> <td nowrap style='text-align: left;'>106.97963</td> <td nowrap style='text-align: left;'>106.11897</td> <td nowrap style='text-align: left;'>109.64767</td> <td nowrap style='text-align: left;'>13546</td> <td nowrap style='text-align: left;'>41.616776</td> <td nowrap style='text-align: left;'>14.117774</td> <td nowrap style='text-align: left;'>9.329521</td> <td nowrap style='text-align: left;'>36508</td> <td nowrap style='text-align: left;'>4</td> <td nowrap style='text-align: left;'>1</td> <td nowrap style='text-align: left;'>1</td> <td nowrap style='text-align: left;'>142.9148</td> <td nowrap style='text-align: left;'>101.86886</td> <td nowrap style='text-align: left;'>271.8584</td> <td nowrap style='text-align: left;'>180.95537</td> <td nowrap style='text-align: left;'>282.4944</td> <td nowrap style='text-align: left;'>0.21629748</td> <td nowrap style='text-align: left;'>-0.6598537</td> <td nowrap style='text-align: left;'>-0.6682809</td> <td nowrap style='text-align: left;'>8008276</td> <td nowrap style='text-align: left;'>3</td> <td nowrap style='text-align: left;'>131</td> <td nowrap style='text-align: left;'>0.030330332</td> <td nowrap style='text-align: left;'>856</td>
+    </tr>
+    <tr class='evenRow'>
+      <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>137272</td> <td nowrap style='text-align: left;'>3000042000793</td> <td nowrap style='text-align: left;'>27000300000138</td> <td nowrap style='text-align: left;'>3000042000835</td> <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>27</td> <td nowrap style='text-align: left;'>3.060419</td> <td nowrap style='text-align: left;'>3000042000794</td> <td nowrap style='text-align: left;'>3000042000836</td> <td nowrap style='text-align: left;'>3000042000792</td> <td nowrap style='text-align: left;'>3000042000793</td> <td nowrap style='text-align: left;'>3000042000836</td> <td nowrap style='text-align: left;'>1187</td> <td nowrap style='text-align: left;'>91.229614</td> <td nowrap style='text-align: left;'>88.56158</td> <td nowrap style='text-align: left;'>96.393555</td> <td nowrap style='text-align: left;'>13100</td> <td nowrap style='text-align: left;'>49.05666</td> <td nowrap style='text-align: left;'>12.531187</td> <td nowrap style='text-align: left;'>11.039088</td> <td nowrap style='text-align: left;'>40108</td> <td nowrap style='text-align: left;'>5</td> <td nowrap style='text-align: left;'>1</td> <td nowrap style='text-align: left;'>1</td> <td nowrap style='text-align: left;'>-356.7572</td> <td nowrap style='text-align: left;'>15.589431</td> <td nowrap style='text-align: left;'>152.52838</td> <td nowrap style='text-align: left;'>160.64604</td> <td nowrap style='text-align: left;'>252.36644</td> <td nowrap style='text-align: left;'>-0.12174041</td> <td nowrap style='text-align: left;'>-0.49106956</td> <td nowrap style='text-align: left;'>-1.0168346</td> <td nowrap style='text-align: left;'>7853168</td> <td nowrap style='text-align: left;'>3</td> <td nowrap style='text-align: left;'>138</td> <td nowrap style='text-align: left;'>0.0349194</td> <td nowrap style='text-align: left;'>514</td>
+    </tr>
+    <tr class='oddRow'>
+      <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>137272</td> <td nowrap style='text-align: left;'>3000042001477</td> <td nowrap style='text-align: left;'>27000300000120</td> <td nowrap style='text-align: left;'>3000042001511</td> <td nowrap style='text-align: left;'>3000042000000</td> <td nowrap style='text-align: left;'>27</td> <td nowrap style='text-align: left;'>3.060419</td> <td nowrap style='text-align: left;'>3000042001478</td> <td nowrap style='text-align: left;'>-1</td> <td nowrap style='text-align: left;'>3000042001476</td> <td nowrap style='text-align: left;'>3000042001477</td> <td nowrap style='text-align: left;'>3000042001513</td> <td nowrap style='text-align: left;'>1182</td> <td nowrap style='text-align: left;'>92.86486</td> <td nowrap style='text-align: left;'>91.14355</td> <td nowrap style='text-align: left;'>95.0165</td> <td nowrap style='text-align: left;'>13548</td> <td nowrap style='text-align: left;'>42.67149</td> <td nowrap style='text-align: left;'>11.942287</td> <td nowrap style='text-align: left;'>11.490484</td> <td nowrap style='text-align: left;'>36525</td> <td nowrap style='text-align: left;'>4</td> <td nowrap style='text-align: left;'>1</td> <td nowrap style='text-align: left;'>1</td> <td nowrap style='text-align: left;'>135.89543</td> <td nowrap style='text-align: left;'>142.34827</td> <td nowrap style='text-align: left;'>-41.739506</td> <td nowrap style='text-align: left;'>156.61366</td> <td nowrap style='text-align: left;'>255.71411</td> <td nowrap style='text-align: left;'>0.35913372</td> <td nowrap style='text-align: left;'>-0.09791989</td> <td nowrap style='text-align: left;'>-0.19318426</td> <td nowrap style='text-align: left;'>8145202</td> <td nowrap style='text-align: left;'>3</td> <td nowrap style='text-align: left;'>120</td> <td nowrap style='text-align: left;'>0.03478305</td> <td nowrap style='text-align: left;'>360</td>
+    </tr>
+  </tbody>
+  <tfoot class='footer'>
+  </tfoot>
+</table>
+</div>
+  </td>
+ </tr>
+</table>
+
+<!-- end body -->
+
+</body>
+</html>
