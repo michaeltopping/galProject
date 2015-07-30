@@ -7,6 +7,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from scipy import interpolate
 from matplotlib.colors import LinearSegmentedColormap
 from cosmology import *
+from scipy import interpolate
 
 
 
@@ -172,6 +173,7 @@ def plot3d(galaxies, movieBool):
 
 #calculate the column density and plot it
 def colDensity(galaxies, peak):
+    #basic range parameters
     peakmin = 3.06
     peakmax = 3.11
     peakLimit = 3.077
@@ -201,13 +203,14 @@ def colDensity(galaxies, peak):
 
     positions = positions.reshape(-1,2)
     #parameters for the size of the heatmap
-    N = 50
+    N =200 
     minx = -8.
     miny = -8.
     maxx = 8.
     maxy = 8.
     dx = (maxx-minx)/N
     dy = (maxy-miny)/N
+    Rs = 5.
     #create the blank heat map
     density = np.zeros(shape=(N, N))
     
@@ -219,10 +222,16 @@ def colDensity(galaxies, peak):
             #calculate a list of distances
             distances = np.sqrt((positions[:,0]-(minx+ix*dx))**2+(positions[:,1]-(miny+iy*dy))**2)
             #Count the number of galaxies that are within 2 Comoving Mpc
-            density[ix][iy] = len(np.where(distances<2)[0])
+#            density[ix][iy] = len(np.where(distances<2)[0])
+            #divide the number of galaxies in the peak by the sum of the distances
+            density[ix][iy] = np.sum(np.shape(distances)[0]/(distances/Rs*(1+distances/Rs)**2))
 
-    #Create the plot
-    plt.pcolor(density)
+   #Create the plot
+    std = np.std(density)
+    plt.pcolor(density, vmin=0, vmax=5*std)
+    plt.xlabel(r"$\rm Comoving \ Mpc$", fontsize=16)
+    plt.ylabel(r"$\rm Comoving \ Mpc$", fontsize=16)
+    plt.colorbar(label="{}".format(peak))
     plt.show()
 
 
