@@ -148,10 +148,12 @@ def plot3d(galaxies, movieBool):
             #plot the galaxy
             ax3d.scatter(cmToMpc*DC(galaxy.z)*(galaxy.RA-midRA)*(np.pi/180.),
                  cmToMpc*DC(galaxy.z)*(galaxy.dec-midDec)*(np.pi/180.),
-                 cmToMpc*DC(galaxy.z)-cmToMpc*(DC(peakLimit)), color=color, 
+                 (cmToMpc*DC(galaxy.z)-cmToMpc*(DC(peakLimit))), color=color, 
                  marker=marker, edgecolors='black')
     #plotting parameters
     ax3d.set_zlim3d(-30, 30)
+    ax3d.set_xlim3d(-8, 8)
+    ax3d.set_ylim3d(-8, 8)
     ax3d.set_xlabel(r"$\rm Comoving \ Mpc$")
     ax3d.set_ylabel(r"$\rm Comoving \ Mpc$")
     ax3d.set_zlabel(r"$\rm Comoving \ Mpc$")
@@ -163,6 +165,67 @@ def plot3d(galaxies, movieBool):
             print("Finished saving frame {}.".format(ii))
     else:   
         plt.show()
+
+
+
+
+
+#calculate the column density and plot it
+def colDensity(galaxies, peak):
+    peakmin = 3.06
+    peakmax = 3.11
+    peakLimit = 3.077
+    midRA = 334.37
+    midDec =0.2425
+
+    #dependeing on input, set the limits to enclose one or both of the peaks
+    if peak == 'b':
+        peakRange = [3.05, peakLimit]
+    elif peak == 'r':
+        peakRange = [peakLimit, 3.12]
+    else:
+        peakRange = [3.05, 3.12]
+    #blank positions array 
+    positions = np.array([])
+    #loop through the dictionary of galaxies
+    for gal in galaxies:
+        galaxy = galaxies[gal] 
+
+        #only look for galaxies that are in the requested peak
+        if galaxy.z > peakRange[0] and galaxy.z < peakRange[1]:
+
+            #create an array of x and y values to the galaxies 
+            x = cmToMpc*DC(galaxy.z)*(galaxy.RA-midRA)*(np.pi/180.)
+            y = cmToMpc*DC(galaxy.z)*(galaxy.dec-midDec)*(np.pi/180.)
+            positions = np.append(positions, np.array([x, y]) )
+
+    positions = positions.reshape(-1,2)
+    #parameters for the size of the heatmap
+    N = 50
+    minx = -8.
+    miny = -8.
+    maxx = 8.
+    maxy = 8.
+    dx = (maxx-minx)/N
+    dy = (maxy-miny)/N
+    #create the blank heat map
+    density = np.zeros(shape=(N, N))
+    
+    #Loop through the x positions
+    for ix in range(N):
+        #loop through the y positions
+        for iy in range(N):
+            distances = np.array([])
+            #calculate a list of distances
+            distances = np.sqrt((positions[:,0]-(minx+ix*dx))**2+(positions[:,1]-(miny+iy*dy))**2)
+            #Count the number of galaxies that are within 2 Comoving Mpc
+            density[ix][iy] = len(np.where(distances<2)[0])
+
+    #Create the plot
+    plt.pcolor(density)
+    plt.show()
+
+
 
 
 if __name__=="__main__":
@@ -177,12 +240,17 @@ if __name__=="__main__":
         if char=='q':
             break
         if char=='2':
+            print("Scatter plot or heat map? (s/h)")
+            plottype=input(":")
             print("Which peak to plot?")
             print("  r: red peak")
             print("  b: blue peak")
             print("  d: both peaks")
             peak = input(":")
-            plot2d(galaxies, peak)
+            if plottype == "s":
+                plot2d(galaxies, peak)
+            if plottype == "h":
+                colDensity(galaxies, peak)
         if char=='3':
             movieBool = input("Create Movie? (y/n)") is 'y'
             plot3d(galaxies, movieBool)
