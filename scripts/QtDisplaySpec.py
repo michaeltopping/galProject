@@ -366,6 +366,7 @@ class ApplicationWindow(QMainWindow):
 
                         #add the peak to the emRedhisft array in the galaxy object
                         self.galaxies[dataset.objects[file]].emRedshifts.append(peakfit)
+                        self.galaxies[dataset.objects[file]].noises.append(spec.noiseSubtract)
                     except:
                         print("Error finding peak")
                 #if no peaks were found, use estimation from emission lines
@@ -386,6 +387,8 @@ class ApplicationWindow(QMainWindow):
                         logfile.write(str(file)+ "    "+ dataset.filenames[file]+"    z=" +str(peakfit)+ '\n')
                         if peakfit > 0:
                             self.galaxies[dataset.objects[file]].emRedshifts.append(peakfit)
+                            self.galaxies[dataset.objects[file]].noises.append(spec.noiseSubtract)
+ 
                     #if there is a problem fitting a gaussian
                     except RuntimeError:
                         print("Unable to fit Gaussian")
@@ -404,6 +407,9 @@ class ApplicationWindow(QMainWindow):
                     #add the absorption redshift to the galaxy redshift array
                     self.galaxies[dataset.objects[file]].absRedshifts.append(absz)
 
+
+                #add the type of spectral line
+                self.galaxies[dataset.objects[file]].type.append(spec.peakType)
         #print out some data about the redshifts
         print("Got ", zs.size, " Redshifts")
         print("Got ", laezs.size, "LAE Redshifts")
@@ -472,11 +478,12 @@ class ApplicationWindow(QMainWindow):
         #go through the dictionary of galaxies
         for gal, galObject in sorted(self.galaxies.items()):
             d = "s"
+            print(self.galaxies[gal].type)
             if 'd' in self.galaxies[gal].type:
                 d = "d"
 
             #write a file with the name of an object, and redshift data
-            outputFile.write("{:11}   {:6.4f}    {:6.4f}    {:6.4f}        {}\n".format(gal, self.galaxies[gal].sysRedshift, self.galaxies[gal].emRedshift, self.galaxies[gal].absRedshift, d))
+            outputFile.write("{:11}   {:6.4f}    {:6.4f}    {:6.4f}        {}    \n".format(gal, self.galaxies[gal].sysRedshift, self.galaxies[gal].emRedshift, self.galaxies[gal].absRedshift, d))
         outputFile.close()
         print("Finished writing data")
 
@@ -525,7 +532,7 @@ class ApplicationWindow(QMainWindow):
         plt.hist(zs, bins=30, range=(3.05, 3.12), histtype="stepfilled" ,color='blue')
 
         #plt.plot(bin_centers, hist, 'k', linewidth=2)
-        plt.plot(x, twoGauss(x, fitParam[0],fitParam[1],fitParam[2],fitParam[3],fitParam[4],fitParam[5]), 'k', linewidth=2)
+#        plt.plot(x, twoGauss(x, fitParam[0],fitParam[1],fitParam[2],fitParam[3],fitParam[4],fitParam[5]), 'k', linewidth=2)
         plt.xlabel("$z$")
         plt.ylabel("$N$")
         plt.xlim([3.05,3.12])

@@ -57,7 +57,7 @@ class spectrum():
         self.EW = 0
 
         #type of peak
-        self.peakType = 's'
+        self.peakType = ''
 
         #Read in data into spec, and header data into header
         print("Reading in data from "+filename)
@@ -352,14 +352,18 @@ class spectrum():
         plotSpectra = self.spec[peak-3*subSpecN:peak+3*subSpecN]
         plotWavelengths = self.wavelengths[peak-3*subSpecN:peak+3*subSpecN]
 
-
+        #calculate the noise of the spectrum
         noise = 1e-30*np.std(1e30*np.abs(self.spec[peak-2*subSpecN:peak-subSpecN]))
+        #with subtracting out the continuum
+        self.noiseSubtract =np.std(np.abs(self.spec[peak-2*subSpecN:peak-subSpecN]-
+                                    self.smoothSpec[peak-2*subSpecN:peak-subSpecN])) 
+
         #check if the line is double peaked, then it will have different 
         # behavior when calculating systematic redshift
         trough = self.isDoublePeaked(self.wavelengths, self.spec, self.wavelengths[peak], noise)
         if trough > 0:
             doublePeaked = True
-            self.type = 'd'    
+            self.peakType = 'd'    
         else:
             doublePeaked = False
 
@@ -417,21 +421,21 @@ class spectrum():
                 #check if the feature is emission
                 if fitParam[0]>0:
                     #comment out to save figures sorted by object
-#                    plt.cla()
-#                    #plot the spectrum
-#                    plt.plot(self.wavelengths, self.spec)
-#                    #save a figure of the entire spectrum
-#                    plt.savefig("./images/"+self.objName+"/"+self.filename[0:-5]+"fullspec.png")
-#                    
-#
-#                    plt.cla()
-#                    #plot the data near the LyA line
-#                    plt.plot(subWavelengths, subSpectra/maxSpec, linewidth=2)
-#                    #plot the best fit
-#                    plt.plot(subWavelengths, (subWavelengths-subWavelengths[subSpecN-1])*fitParam[4]+fitParam[3]+fitParam[0]*np.exp(-(subWavelengths-(fitParam[1]+subWavelengths[subSpecN-1]))**2/(2*fitParam[2]**2)), linewidth=2, label="z=%.3f" % z+"d"*doublePeaked)
-#                    plt.legend()
-#                    #save the figure of just the LyA line
-#                    plt.savefig("./images/"+self.objName+"/"+self.filename[0:-5]+"linespec.png")
+                    plt.cla()
+                    #plot the spectrum
+                    plt.plot(self.wavelengths, self.spec)
+                    #save a figure of the entire spectrum
+                    plt.savefig("./images/"+self.objName+"/"+self.filename[0:-5]+"fullspec.png")
+                    
+
+                    plt.cla()
+                    #plot the data near the LyA line
+                    plt.plot(subWavelengths, subSpectra/maxSpec, linewidth=2)
+                    #plot the best fit
+                    plt.plot(subWavelengths, (subWavelengths-subWavelengths[subSpecN-1])*fitParam[4]+fitParam[3]+fitParam[0]*np.exp(-(subWavelengths-(fitParam[1]+subWavelengths[subSpecN-1]))**2/(2*fitParam[2]**2)), linewidth=2, label="z=%.3f" % z+"d"*doublePeaked)
+                    plt.legend()
+                    #save the figure of just the LyA line
+                    plt.savefig("./images/"+self.objName+"/"+self.filename[0:-5]+"linespec.png")
 
                     #now save a copy of the images all together in one directory, prepended by the redshift
                     if not(os.path.isdir("./images/all/")):
@@ -440,7 +444,7 @@ class spectrum():
                     #plot the spectrum
                     plt.plot(self.wavelengths, self.spec)
                     #save the figure of the whole spectrum
-                    plt.savefig("./images/all/{:6.4f}_".format(z)+self.filename[0:-5]+"_fullspec.png")
+                    plt.savefig("./images/all/{:6.4f}_".format(z)+self.objName+"_"+self.filename[0:-5]+"_fullspec.png")
                     
                     plt.cla()
                     #plot the data around LyA
@@ -457,7 +461,7 @@ class spectrum():
                     #if it is a double peak, we will plot additional things
                     if doublePeaked:
                         #plot the location of the trough
-                        plt.plot([self.wavelengths[trough], self.wavelengths[trough]], [0,1], 'k')
+                        plt.plot([self.wavelengths[trough], self.wavelengths[trough]], [0,1], 'k:', linewidth=2)
                     plt.savefig("./images/all/{:6.4f}".format(z)+
                             "d"*doublePeaked+"_"+self.objName+"_"+self.filename[0:-5]+"_linespec.png")
 
@@ -495,7 +499,7 @@ class spectrum():
                 if fitParam[0]>0:
                     return (fitParam[1]+subWavelengths[subSpecN-1])/LyA-1
                 else:
-                    return -2
+                    return -3
             else:
                 #if the line id double peaked
                 return self.wavelengths[trough]/LyA - 1
@@ -513,7 +517,7 @@ class spectrum():
         print("Zguess is ", zguess)
 
         #this is how far away from a guess we want to check
-        absZthresh = 0.02
+        absZthresh = 0.005
 
         #create a list of redshifts to iterate over
         zlist = np.linspace(zguess*(1-absZthresh),zguess*(1+absZthresh), 100)
@@ -568,9 +572,11 @@ class spectrum():
 
             plt.xlim([min(lines*(absZ+1)), max(lines*(absZ+1))])
             plt.ylim([-1, 1])
-            plt.savefig("./images/all/absorption/"+str(absZ)+"_"+self.filename[0:-5]+"_absorbspec.png")
-
-        return absZ
+            plt.savefig("./images/all/absorption/"+str(absZ)+"_"+self.objName+"_"+self.filename[0:-5]+"_absorbspec.png")
+        if (absZ < 3.35) and (absZ > 2.7):
+            return absZ
+        else:
+            return -2
 
 
     #find the equivalent width of the Lyman alpha line
