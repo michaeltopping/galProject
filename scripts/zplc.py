@@ -8,7 +8,7 @@ from scipy import interpolate
 from matplotlib.colors import LinearSegmentedColormap
 from cosmology import *
 from scipy import interpolate
-
+import DBSCAN
 
 
 #Constants and conversions
@@ -99,6 +99,7 @@ def plot2d(galaxies,peak):
              c=cmToMpc*DC(galaxy.z)-cmToMpc*DC(peakLimit),
              cmap=colorMap, s=100, marker = marker)
 
+                    
 
 
 
@@ -112,7 +113,7 @@ def plot2d(galaxies,peak):
 
 
     #display/save figure
-#    plt.savefig("scatter.png", dpi=400)
+    plt.savefig("scatter.png", dpi=400)
     plt.show()
 
 
@@ -210,7 +211,7 @@ def colDensity(galaxies, peak):
     maxy = 8.
     dx = (maxx-minx)/N
     dy = (maxy-miny)/N
-    Rs = 5.
+    Rs = 20.
     #create the blank heat map
     density = np.zeros(shape=(N, N))
     
@@ -237,14 +238,77 @@ def colDensity(galaxies, peak):
 
 
 
+
+#find the number of clusters in the sample
+def clustering(galaxies, eps, minPts):
+    midRA = 334.37
+    midDec =0.2425
+    peakLimit = 3.077
+    #create the list of points
+    D = np.array([])
+    for gal in galaxies:
+        galaxy = galaxies[gal]
+        x = cmToMpc*DC(galaxy.z)*(galaxy.RA-midRA)*(np.pi/180.)
+        y = cmToMpc*DC(galaxy.z)*(galaxy.dec-midDec)*(np.pi/180.)
+        z = (cmToMpc*DC(galaxy.z)-cmToMpc*(DC(peakLimit)))
+        D = np.append(D,[x, y, z])
+    #reshape to create a 2xN array
+    D = D.reshape((-1,3))
+
+    clusters, noise = DBSCAN.DBSCAN(D, eps, minPts)
+    return clusters, noise
+
+
+#plot clusters and noise particles
+def plotClusters(clusters, noise):
+    
+
+    colors = ['k', 'b', 'r', 'y', 'c']
+     #loop through and plot the points
+    for ii in range(len(clusters)):
+        for P in clusters[ii].points:
+            plt.plot(P.x, P.y, '{}^'.format(colors[ii%4]))
+ 
+    #plot the noise points
+    for P in noise:
+        plt.plot(P.x, P.y, 'k.')
+ 
+    plt.ylim([-8, 8])
+    plt.xlim([-8, 8])
+    plt.show()
+
+
+
+
+def clusterParamSearch(galaxies):
+    eArr = np.linspace(0, 20, 1000)
+    nclusters = np.array([])    
+    nnoise = np.array([])
+
+    #loop through each of the parameters
+    for e in eArr:
+        cs, ns = clustering(galaxies, e, 3)
+        nclusters = np.append(nclusters, len(cs))
+        nnoise = np.append(nnoise, len(ns))
+
+    plt.plot(eArr, nclusters, 'k', linewidth=2)
+    plt.plot(eArr, nnoise, 'b', linewidth=2)
+    plt.ylabel("Number of Clusters")
+    plt.xlabel("eps")
+    plt.show()
+
+
+
 if __name__=="__main__":
+
     galaxies = dataInit()    
     while True:
         print("----Commands----")
         print("q: quit")
         print("2: plot 2d figure")
         print("3: plot 3d figure")
-        print("    Create movie y/n")
+        print("4: calculate clustering")
+        print("5: search clustering parameter space")
         char = input("Make Selection:")
         if char=='q':
             break
@@ -263,8 +327,10 @@ if __name__=="__main__":
         if char=='3':
             movieBool = input("Create Movie? (y/n)") is 'y'
             plot3d(galaxies, movieBool)
-
-
+        if char=='4':
+            clustering(galaxies, 1, 3)
+        if char=='5':
+            clusterParamSearch(galaxies)
 
 
 
