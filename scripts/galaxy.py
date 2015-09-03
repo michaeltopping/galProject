@@ -31,9 +31,12 @@ class Galaxy():
     # shift data from Adelberger et al. 2003, Trainor et al. 2015
     def systemicShift(self):
         #go through the list and eleminate all redshifts that are negative
+        delIndices = []
         for ii in range(len(self.emRedshifts)):
             if self.emRedshifts[ii] < 0:
-                self.emRedshifts = np.delete(self.emRedshifts, ii)
+                delIndices.append(ii)
+        for ii in delIndices[::-1]:        
+            self.emRedshifts = np.delete(self.emRedshifts, ii)
 
         #if the lyman alpha line is double peaked
         if ("d" in self.type):

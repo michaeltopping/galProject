@@ -118,14 +118,18 @@ def plot2d(galaxies,peak):
 
 
 
-def plot3d(galaxies, movieBool):
+def plot3d(galaxies, movieBool, peak):
     #Basic plotting vaiables
     peakmin = 3.06
     peakmax = 3.11
     peakLimit = 3.077
     midRA = 334.37
     midDec =0.2425
-    
+    #in order to find the plotting range
+    X = np.array([])
+    Y = np.array([])
+    Z = np.array([])    
+
     #Create figure for 3d visualization
     fig3d = plt.figure()
     ax3d = fig3d.add_subplot(111, projection='3d')
@@ -147,18 +151,41 @@ def plot3d(galaxies, movieBool):
             if galaxy.z > peakLimit:
                 color = 'red'
                 marker = 'o'
+         #make sure the galaxies are in the required range
+        if peak == 'b':
+            peakRange = [3.05, peakLimit]
+        elif peak == 'r':
+            peakRange = [peakLimit, 3.12]
+        else:
+            peakRange = [3.05, 3.12]
+        if galaxy.z > peakRange[0] and galaxy.z < peakRange[1]:
             #plot the galaxy
             ax3d.scatter(cmToMpc*DC(galaxy.z)*(galaxy.RA-midRA)*(np.pi/180.),
                  cmToMpc*DC(galaxy.z)*(galaxy.dec-midDec)*(np.pi/180.),
                  (cmToMpc*DC(galaxy.z)-cmToMpc*(DC(peakLimit))), color=color, 
                  marker=marker, edgecolors='black')
+            X = np.append(X,cmToMpc*DC(galaxy.z)*(galaxy.RA-midRA)*(np.pi/180.))
+            Y = np.append(Y,cmToMpc*DC(galaxy.z)*(galaxy.dec-midDec)*(np.pi/180.)) 
+            Z = np.append(Z, (cmToMpc*DC(galaxy.z)-cmToMpc*(DC(peakLimit))))
     #plotting parameters
-    ax3d.set_zlim3d(-30, 30)
-    ax3d.set_xlim3d(-8, 8)
-    ax3d.set_ylim3d(-8, 8)
+#    ax3d.set_zlim3d(-30, 30)
+#    ax3d.set_xlim3d(-30, 30)
+#    ax3d.set_ylim3d(-30, 30)
+    max_range = np.array([X.max()-X.min(), Y.max()-Y.min(), Z.max()-Z.min()]).max() / 2.0
+
+    mean_x = X.mean()
+    mean_y = Y.mean()
+    mean_z = Z.mean()
+    ax3d.set_xlim(mean_x - max_range, mean_x + max_range)
+    ax3d.set_ylim(mean_y - max_range, mean_y + max_range)
+    ax3d.set_zlim(mean_z - max_range, mean_z + max_range)
+    ax3d.set_aspect('equal')
     ax3d.set_xlabel(r"$\rm Comoving \ Mpc$")
     ax3d.set_ylabel(r"$\rm Comoving \ Mpc$")
     ax3d.set_zlabel(r"$\rm Comoving \ Mpc$")
+
+
+
     if movieBool:
         #Animate the azimuth for the 3d plot
         for ii in range(0,360,1):
@@ -325,8 +352,14 @@ if __name__=="__main__":
             if plottype == "h":
                 colDensity(galaxies, peak)
         if char=='3':
+            print("Which peak to plot?")
+            print("  r: red peak")
+            print("  b: blue peak")
+            print("  d: both peaks")
+            peak = input(":")
+            
             movieBool = input("Create Movie? (y/n)") is 'y'
-            plot3d(galaxies, movieBool)
+            plot3d(galaxies, movieBool, peak)
         if char=='4':
             clustering(galaxies, 1, 3)
         if char=='5':

@@ -316,6 +316,11 @@ class ApplicationWindow(QMainWindow):
             print(dataset)
             #loop through each file
             for file in range(len(dataset.filenames)):
+                #list which object is being used:
+                logfile.write("------------------------\n")
+                logfile.write("Object: {} being measured from file: {}\n".format(dataset.objects[file], 
+                                dataset.filenames[file]))
+                logfile.write("------------------------\n")
                 #create a local spectrum object for each file
                 spec = spectrum(dataset.folder, dataset.filenames[file], dataset.objects[file], dataset.guessemRedshifts[file], dataset.guessabsRedshifts[file], dataset.apertures[file])
                 #find all peaks in the file
@@ -330,69 +335,69 @@ class ApplicationWindow(QMainWindow):
                 #if not(dataset.objects[file] in objects):
                 objects = np.append(objects, dataset.objects[file])
                 #if there are any peaks in the spectrum
-                if peaks.size:
-                    try:
-                        #pick the highest peak
-                        highestPeak = np.where(data == np.max(data[peaks.astype(int)]))
-                        #fit the peak to a gaussian and return the center
-                        peakfit = spec.fitLine(highestPeak, emPlotBool, subSpecN)
-#                        print(peakfit, highestPeak)
-#                        noise = 1e-30*np.std(1e30*np.abs(spec.spec[highestPeak[0]-2*subSpecN:highestPeak[0]-subSpecN]))
-#                        print("Noise level: ",1e-30*np.std(1e30*np.abs(spec.spec[highestPeak[0]-2*subSpecN:highestPeak[0]-subSpecN])))
+#                if peaks.size:
+#                    try:
+#                        #pick the highest peak
+#                        highestPeak = np.where(data == np.max(data[peaks.astype(int)]))
+#                        #fit the peak to a gaussian and return the center
+#                        peakfit = spec.fitLine(highestPeak, emPlotBool, subSpecN, logfile)
+##                        print(peakfit, highestPeak)
+##                        noise = 1e-30*np.std(1e30*np.abs(spec.spec[highestPeak[0]-2*subSpecN:highestPeak[0]-subSpecN]))
+##                        print("Noise level: ",1e-30*np.std(1e30*np.abs(spec.spec[highestPeak[0]-2*subSpecN:highestPeak[0]-subSpecN])))
+##
+##                        #check if the line is double peaked, then it will have different behavior when calculating systematic redshift
+##                        doublePeaks = spec.isDoublePeaked(spec.wavelengths, spec.spec, spec.wavelengths[highestPeak], noise)
+##                        if len(doublePeaks) == 2:
+##                            doublePeaked = True
+##                        else:
+##                            doublePeaked = False
+##
+##                        if doublePeaked:
+##                            #if it is double peaked we will use the redshift of the trough between the peaks
+##                            trough = spec.spec[min(doublePeaks):max(doublePeaks)].argmin()+min(doublePeaks)
+##                            peakfit = spec.wavelengths[trough]/LyA - 1
+##                            #add double peaked identifier to the galaxy type
+##                            self.galaxies[dataset.objects[file]].type.append('d')
 #
-#                        #check if the line is double peaked, then it will have different behavior when calculating systematic redshift
-#                        doublePeaks = spec.isDoublePeaked(spec.wavelengths, spec.spec, spec.wavelengths[highestPeak], noise)
-#                        if len(doublePeaks) == 2:
-#                            doublePeaked = True
-#                        else:
-#                            doublePeaked = False
 #
-#                        if doublePeaked:
-#                            #if it is double peaked we will use the redshift of the trough between the peaks
-#                            trough = spec.spec[min(doublePeaks):max(doublePeaks)].argmin()+min(doublePeaks)
-#                            peakfit = spec.wavelengths[trough]/LyA - 1
-#                            #add double peaked identifier to the galaxy type
-#                            self.galaxies[dataset.objects[file]].type.append('d')
-
-
-
-                        zs = np.append(zs, peakfit)
-                        #check if the objects is labeled as a Lyman alpha emitter
-                        if ('lae' in dataset.filenames[file]):
-                            laezs = np.append(laezs, peakfit)
-                            #add the lae identifier to galaxy type
-                            self.galaxies[dataset.objects[file]].type.append('lae')
-                        logfile.write(str(file)+ "    "+ dataset.filenames[file]+"    z=" +str(peakfit)+ '\n')
-
-                        #add the peak to the emRedhisft array in the galaxy object
-                        self.galaxies[dataset.objects[file]].emRedshifts.append(peakfit)
-                        self.galaxies[dataset.objects[file]].noises.append(spec.noiseSubtract)
-                    except:
-                        print("Error finding peak")
-                #if no peaks were found, use estimation from emission lines
-                elif dataset.guessemRedshifts[file] > 0:
+#
+#                        zs = np.append(zs, peakfit)
+#                        #check if the objects is labeled as a Lyman alpha emitter
+#                        if ('lae' in dataset.filenames[file]):
+#                            laezs = np.append(laezs, peakfit)
+#                            #add the lae identifier to galaxy type
+#                            self.galaxies[dataset.objects[file]].type.append('lae')
+#
+#                        #add the peak to the emRedhisft array in the galaxy object
+#                        self.galaxies[dataset.objects[file]].emRedshifts.append(peakfit)
+#                        self.galaxies[dataset.objects[file]].noises.append(spec.noiseSubtract)
+#                        #write this process to the log
+#                        logfile.write("Redshift calculated from detected line. z={:6.4f}\n".format(peakfit))
+#                    except:
+#                        print("Error finding peak")
+#                #if no peaks were found, use estimation from emission lines
+                if dataset.guessemRedshifts[file] > 0:
                     try:
                         #same fitting technique as before
                         emRedshiftIndex = np.argmin(np.abs(wavelengths -(dataset.guessemRedshifts[file]+1)*LyA))
                         print("Emredshift:",emRedshiftIndex, dataset.guessemRedshifts[file])
 
                         #find the fitted peak
-                        peakfit = spec.fitLine([emRedshiftIndex], emPlotBool, subSpecN)
+                        peakfit = spec.fitLine([emRedshiftIndex], emPlotBool, subSpecN, logfile)
 
                         zs = np.append(zs, peakfit)
                         if ('lae' in dataset.filenames[file]):
                             laezs = np.append(laezs, peakfit)
                             #add lae identifier to galaxy type
                             self.galaxies[dataset.objects[file]].type.append('lae')
-                        logfile.write(str(file)+ "    "+ dataset.filenames[file]+"    z=" +str(peakfit)+ '\n')
                         if peakfit > 0:
                             self.galaxies[dataset.objects[file]].emRedshifts.append(peakfit)
                             self.galaxies[dataset.objects[file]].noises.append(spec.noiseSubtract)
+                        logfile.write("Redshift calculated from an estimate. z={:6.4f}\n".format(peakfit))
  
                     #if there is a problem fitting a gaussian
                     except RuntimeError:
                         print("Unable to fit Gaussian")
-                        logfile.write(str(file) +"    "+ dataset.filenames[file]+ "    Unable to fit Gaussian"+ '\n')
                 #if there is a guess for a redshift based on interstellar absorption
                 if dataset.guessabsRedshifts[file] > 0:
 #                         try:
@@ -403,13 +408,14 @@ class ApplicationWindow(QMainWindow):
                     absz = spec.fitAbsLine(zguess, absPlotBool)
 
                     abszs = np.append(abszs, absz)
-                    logfile.write(str(file)+ "    "+ dataset.filenames[file]+" abs    z=" +str(absz)+ '\n')
                     #add the absorption redshift to the galaxy redshift array
                     self.galaxies[dataset.objects[file]].absRedshifts.append(absz)
 
+                    logfile.write("Absorption redshift calculated from estimate. z_abs={:6.4f}\n".format(absz))
 
                 #add the type of spectral line
                 self.galaxies[dataset.objects[file]].type.append(spec.peakType)
+                logfile.write("\n")
         #print out some data about the redshifts
         print("Got ", zs.size, " Redshifts")
         print("Got ", laezs.size, "LAE Redshifts")

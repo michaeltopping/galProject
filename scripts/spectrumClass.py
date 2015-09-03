@@ -20,6 +20,11 @@ f = np.array([1.007, 0.04887, .1278, .5140, .2553, .130, .1])
 def gauss(wavelengths, a, center, sigma, b, c):
     return c*wavelengths+b+a*np.exp(-(wavelengths-center)**2/(2*sigma**2))
 
+#define a simple gaussian to fit to
+def simpleGauss(wavelengths, a, center, sigma, b):
+    return a*np.exp(-(wavelengths-center)**2/(2*sigma**2))+b
+
+
 
 #spectrum class
 #procedures:
@@ -117,7 +122,7 @@ class spectrum():
 
 
         #set limits on the wavelength that we are looking at
-        minWavelength = 4500
+        minWavelength = 4000
         maxWavelength = 5300
         minWavelengthIndex = np.where(abs(self.wavelengths-minWavelength) ==
                                min(abs(self.wavelengths-minWavelength)))[0]
@@ -132,16 +137,17 @@ class spectrum():
 
     #LyAguess is in angstroms
     #check to see if the Lyman Alpha line is double peaked
-    def isDoublePeaked(self, wavelengths, spec, LyAguess, noise):
+    def isDoublePeaked(self, wavelengths, spec, LyAguess, noise, subSpecN, logfile):
         dspec = np.array([])
         dlambda = np.array([])
+        logfile.write("Beginning determination of double peakededness.\n")
 
         #assume double peaked at first
         doublePeaked = True
 
         #set limits on the wavelength that we are looking at
         minWavelength = LyAguess-15
-        maxWavelength = LyAguess+8
+        maxWavelength = LyAguess+12
         minWavelengthIndex = np.where(abs(wavelengths-minWavelength) ==
                                min(abs(wavelengths-minWavelength)))[0][0]
         maxWavelengthIndex = np.where(abs(wavelengths-maxWavelength) ==
@@ -153,6 +159,11 @@ class spectrum():
         maxNorm = max(peakSpec)
         peakSpec = peakSpec/maxNorm
 
+        logfile.write("This spectrum has noise: {:5f}\n".format(noise/maxNorm))
+        #write the window that is within the peak
+        logfile.write("Checking for peaks in range: {:5f}-{:5f}\n".format(peakWavelengths[0], 
+                        peakWavelengths[-1]))
+        
         #take the derivative of the lyman alpha line profile
         for ii in range(len(peakWavelengths)-1):
             dspec = np.append(dspec, peakSpec[ii+1]-peakSpec[ii])
@@ -186,6 +197,10 @@ class spectrum():
                len(np.where( peakSpec[peaks]>0.8 )[0])))
         print("List of peaks aaaa:{}".format(peakSpec[peaks]))
         print("List of high peaks aaaa:{}".format(np.where(peakSpec[peaks]>0.8)))
+        logfile.write("Found {} peakes that are above 80% of highest peak.\n".format(len(list(  np.where(  peakSpec[peaks]>0.8  )[0]  )))) 
+
+
+
         if len(list(  np.where(  peakSpec[peaks]>0.8  )[0]  )) >= 2:
             for peak in list(np.where(peakSpec[peaks]>0.8)[0]):
                 peak = peaks[peak]
@@ -200,10 +215,11 @@ class spectrum():
                       min(LyApeaks[maxs]))
             #check if the trough is significantly below the peaks
             #the trough must be less than "throughThresh" times the smaller of the peaks
-            troughThresh = 0.8
+            troughThresh = 0.75
+            logfile.write("The trough is at a depth of: {:5f} and has to be less than: {:5f}\n".format(self.spec[int(trough)]/maxNorm, troughThresh/maxNorm*min(self.spec[LyApeaks[maxs].astype(int)])))
             if self.spec[int(trough)] > troughThresh*min(self.spec[LyApeaks[maxs].astype(int)]):
                 doublePeaked = False
-
+                logfile.write("The trough is not deep enough to be considered double peaked.\n")
 
             if doublePeaked:
                 return trough 
@@ -211,11 +227,19 @@ class spectrum():
         #this requires that if there is a smaller secondary peak, it must
         # be above the noise level(currently set at 2sigma), and the 
         # trough must be below that noise level
+        logfile.write("Now checking for an asymmetric red peak.\n")
         LyApeaks=np.array([])
-        nNoise = 3
-        print("Checking for peaks above a threshold of {}".format(2*noise/maxNorm))
-        if len(list(  np.where(  peakSpec[peaks]>  nNoise*noise/maxNorm  )[0]  )) >= 2:
-            for peak in list(np.where(peakSpec[peaks]>nNoise*noise/maxNorm)[0]):
+        nNoise = 4
+        logfile.write("Checking for peaks above noise level: {:5f}\n".format(nNoise*noise/maxNorm))
+
+        conts = self.lineConst + self.lineLinear*(peakWavelengths[peaks]-self.subWavelengths[subSpecN-1])
+        logfile.write("Found {} peaks that are above the noise level:{}.\n".format(len(list(  np.where(  peakSpec[peaks]-conts>  nNoise*noise/maxNorm  )[0]  )), nNoise*noise/maxNorm)) 
+
+        logfile.write("These peaks are: {}".format(np.where(  peakSpec[peaks]-conts>  nNoise*noise/maxNorm  )))
+        print("peaks, conts v")
+        print(peakSpec[peaks]- conts)
+        if len(list(  np.where(  peakSpec[peaks]-conts>  nNoise*noise/maxNorm  )[0]  )) >= 2:
+            for peak in list(np.where(peakSpec[peaks]-conts>nNoise*noise/maxNorm)[0]):
                 peak = peaks[peak]
                 print("Trying ", peakWavelengths[peak])
                 print("Found peaks at: ", wavelengths[np.where(wavelengths ==
@@ -237,14 +261,30 @@ class spectrum():
             # for finding the secondary peaks 
             #some of these are divided by maxNorm because the noise level is already 
             # normalized, so I have to normalize the other comparisons
-            troughThreshMin =2*noise/maxNorm 
+            troughThreshMin =2.5*noise/maxNorm 
             troughThreshMax = 0.5*min(  self.spec[LyApeaks[maxs].astype(int)]  )/maxNorm
-            print("trough: {}, must be less than: {} and {}".format(self.spec[trough]/maxNorm,
-                     troughThreshMax, troughThreshMin))
-            if self.spec[trough]/maxNorm > troughThreshMin and \
-                 self.spec[trough]/maxNorm > troughThreshMax:
+#            logfile.write("trough: {}, must be less than: {} and {}\n".format(self.spec[trough]/maxNorm, troughThreshMax, troughThreshMin))
+#            if self.spec[trough]/maxNorm > troughThreshMin or \ 
+#                 self.spec[trough]/maxNorm > troughThreshMax:
+            logfile.write("Trough: {:5f} - peak: {:5f} must be smaller than threshold: {:5f}\n".format(self.spec[trough]/maxNorm, self.spec[min(LyApeaks[maxs])]/maxNorm, troughThreshMin))
+            if self.spec[min(LyApeaks[maxs])]/maxNorm-self.spec[trough]/maxNorm < troughThreshMin:
                 doublePeaked = False
+                logfile.write("The trough is not deep enough between the two peaks.\n")
 
+            logfile.write("trough: {}, Largest peak: {}\n".format(trough, LyApeaks[indexSort[0]]))
+        
+            logfile.write("trough: {}, Largest peak: {}\n".format(trough, max(LyApeaks[maxs])))
+            #find the largest peak:
+
+            largestPeak = self.spec[min(LyApeaks[maxs]):max(LyApeaks[maxs])].argmax()+min(LyApeaks[maxs])
+            print("largestPeak: ",largestPeak)
+
+            logfile.write("Largest peak: {}\n".format(largestPeak))
+            if trough > largestPeak and doublePeaked:
+                print("Largest peak tripped!")
+                doublePeaked = False
+                logfile.write("Largest peak: {:5f}, trough: {:5f}\n".format(self.wavelengths[LyApeaks[indexSort[0]]], self.wavelengths[trough]))
+                logfile.write("The trough was blueward of the largest peak: not doublePeaked.\n")
 
             if doublePeaked:
                 return trough
@@ -343,30 +383,26 @@ class spectrum():
 
     #this will fit an emission line
     #returns the best fit center of the line
-    def fitLine(self, peak, plotBool, subSpecN):
+    def fitLine(self, peak, plotBool, subSpecN, logfile, secondary=False):
+        #have to hard code in this here, sorry
+        if self.objName=="C28" or self.objName=="NB928" or self.objName=="NB183":
+            subSpecN=10
+
         #how many wavelength points away from center we want to consider
         #create subarrays from center +/- subSpecN points
-        peak = peak[0]
+        if isinstance(peak, list):
+            peak = peak[0]
         subSpectra = self.spec[peak-subSpecN:peak+subSpecN]
         subWavelengths = self.wavelengths[peak-subSpecN:peak+subSpecN]
+        self.subWavelengths = subWavelengths
         plotSpectra = self.spec[peak-3*subSpecN:peak+3*subSpecN]
         plotWavelengths = self.wavelengths[peak-3*subSpecN:peak+3*subSpecN]
 
         #calculate the noise of the spectrum
         noise = 1e-30*np.std(1e30*np.abs(self.spec[peak-2*subSpecN:peak-subSpecN]))
         #with subtracting out the continuum
-        self.noiseSubtract =np.std(np.abs(self.spec[peak-2*subSpecN:peak-subSpecN]-
-                                    self.smoothSpec[peak-2*subSpecN:peak-subSpecN])) 
-
-        #check if the line is double peaked, then it will have different 
-        # behavior when calculating systematic redshift
-        trough = self.isDoublePeaked(self.wavelengths, self.spec, self.wavelengths[peak], noise)
-        if trough > 0:
-            doublePeaked = True
-            self.peakType = 'd'    
-        else:
-            doublePeaked = False
-
+        self.noiseSubtract =np.std(np.abs(self.spec[peak-5*subSpecN:peak-subSpecN]-
+                                    self.smoothSpec[peak-5*subSpecN:peak-subSpecN])) 
 #        if len(doublePeaks) >= 2:
 #            doublePeaked = True
 #        else:
@@ -412,6 +448,26 @@ class spectrum():
             #calculate redshift
             z = (fitParam[1]+subWavelengths[subSpecN-1])/LyA - 1
 
+            logfile.write("Fit found with amplitude: {:6f}.\n".format(fitParam[0]))
+
+                #check if the line is double peaked, then it will have different 
+            # behavior when calculating systematic redshift
+            trough = self.isDoublePeaked(self.wavelengths, self.spec, self.wavelengths[peak], self.noiseSubtract, subSpecN, logfile)
+            
+            if trough > 0:
+                doublePeaked = True
+                self.peakType = 'd'    
+                logfile.write("LyA classified as double peaked.\n") 
+            else:
+                doublePeaked = False
+            test=False
+            if fitParam[0]<0:
+                if secondary:
+                    return -2
+                else:
+                    z = self.fitLine(peak, plotBool, 10, logfile, True) 
+                    print("Secondary fit done with z={} on object {}".format(z, self.objName))
+                    test=True
             #create a plot of each spectrum and the fitted line.
             if (plotBool):
                 #putting this set of images in a folder for each object
@@ -419,7 +475,8 @@ class spectrum():
                 if not(os.path.isdir("./images/"+self.objName)):
                     os.makedirs("./images/"+self.objName)
                 #check if the feature is emission
-                if fitParam[0]>0:
+                if fitParam[0]>0 or doublePeaked:
+                    logfile.write("Beginning saving plots of the fits.\n")
                     #comment out to save figures sorted by object
                     plt.cla()
                     #plot the spectrum
@@ -435,7 +492,7 @@ class spectrum():
                     plt.plot(subWavelengths, (subWavelengths-subWavelengths[subSpecN-1])*fitParam[4]+fitParam[3]+fitParam[0]*np.exp(-(subWavelengths-(fitParam[1]+subWavelengths[subSpecN-1]))**2/(2*fitParam[2]**2)), linewidth=2, label="z=%.3f" % z+"d"*doublePeaked)
                     plt.legend()
                     #save the figure of just the LyA line
-                    plt.savefig("./images/"+self.objName+"/"+self.filename[0:-5]+"linespec.png")
+                    plt.savefig("./images/"+self.objName+"/"+self.filename[0:-5]+"linespec"+"second"*secondary+".png")
 
                     #now save a copy of the images all together in one directory, prepended by the redshift
                     if not(os.path.isdir("./images/all/")):
@@ -473,6 +530,12 @@ class spectrum():
                     #save the figure with just the LyA line
 #                    plt.savefig("./images/all/{:6.4f}".format(z)+
 #                        "d"*doublePeaked+"_"+self.filename[0:-5]+"_linespec.png")
+            if test:
+                print("Secondary: {} {}".format(z,self.objName))
+
+
+            if self.objName in ["M14", "C19", "laec2_1155", "laec3_1251a", "laec3_1407"]:
+                doublePeaked=False
 
             #if it is not double peaked, we will find the equivalent width
             if not doublePeaked:
@@ -496,8 +559,8 @@ class spectrum():
                 #     return -1*(fitParam[1]+subWavelengths[subSpecN-1])/LyA+1
 
                 #make sure this is not fitting any absorption noise features
-                if fitParam[0]>0:
-                    return (fitParam[1]+subWavelengths[subSpecN-1])/LyA-1
+                if fitParam[0]>0 or test:
+                    return z
                 else:
                     return -3
             else:
@@ -541,6 +604,45 @@ class spectrum():
         #pick out the peak of the cross correlation
         absZ = zlist[integrals.argmax()]
 
+        
+        #Fuck whatever I was doing before this, it didn't work
+        # now I will fit each of the absorption lines individually.
+
+
+        zs = np.array([])
+        #loop through each of the expected lines
+        for line in lines:
+            #create the sub spectra and wavelengths:
+            subSpecN = 3
+            peak = np.abs(self.fullwavelengths-line*(zguess+1)).argmin()
+            subWavelengths = self.fullwavelengths[peak-subSpecN:peak+subSpecN]
+            subSpectra = self.fullspec[peak-subSpecN:peak+subSpecN]
+            maxSpec = max(subSpectra)
+
+            try:
+            #do the fitting
+                fitParam, fitCov = curve_fit(simpleGauss, (subWavelengths-
+                                    subWavelengths[subSpecN-1]), subSpectra/maxSpec)
+                #print out fit data
+                print("A = ", fitParam[0])
+                print("Center = ", fitParam[1]+subWavelengths[subSpecN-1], "Angstroms")
+                print("Sigma = ", fitParam[2])
+                print(subWavelengths[subSpecN-1])
+
+                #set all of the line fit parameters to member variables
+                self.lineAmplitude = fitParam[0]
+                self.lineCenter = fitParam[1]+subWavelengths[subSpecN-1] #in angstroms
+                self.lineSigma = fitParam[2]
+
+                #calculate redshift
+                z = (fitParam[1]+subWavelengths[subSpecN-1])/line - 1
+
+                zs = np.append(zs, z)
+            except RuntimeError:
+                print("Error calculating the fit")
+        zfinal = np.average(zs)
+        print("Final z_abs: {} old: {}".format(zfinal, absZ))
+        absZ = zfinal
         #if wanted, create a plot of the spectrum with absorption lines noted.
         if (plotBool):
             print("Checking to see if directory exists")
@@ -573,7 +675,7 @@ class spectrum():
             plt.xlim([min(lines*(absZ+1)), max(lines*(absZ+1))])
             plt.ylim([-1, 1])
             plt.savefig("./images/all/absorption/"+str(absZ)+"_"+self.objName+"_"+self.filename[0:-5]+"_absorbspec.png")
-        if (absZ < 3.35) and (absZ > 2.7):
+        if (absZ < 3.35) and (absZ > 2.3):
             return absZ
         else:
             return -2
