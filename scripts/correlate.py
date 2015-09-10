@@ -3,6 +3,7 @@ import numpy as np
 from cosmology import *
 import matplotlib.pyplot as plt
 import sys
+import random
 
 #Constants and conversions
 cmToMpc = 3.241e-25
@@ -62,6 +63,8 @@ def three_dim_correlate(galaxies):
         midDec =0.2425
         # this is the middle of the cluster in z space
         peakLimit = 3.078
+        peakMin = 3.06  
+        peakMax = 3.11
         # each row will have the format [x, y, z]
         #  where x is the RA direction, y is the declination
         #  and the z component is the l.o.s. direction.
@@ -70,15 +73,12 @@ def three_dim_correlate(galaxies):
         z = cmToMpc*DC(galaxy.z)-cmToMpc*DC(peakLimit) 
        
         newline = [x, y, z]
-        positions = np.append(positions, newline) 
+        if galaxy.z < peakMax and galaxy.z > peakMin:
+            positions = np.append(positions, newline) 
     
     # reshape the array to be a 3xN array
     positions = np.reshape(positions, (-1, 3))
 
-    toolbar_width=40
-    sys.stdout.write("[%s]" % (" " * toolbar_width))
-    sys.stdout.flush()
-    sys.stdout.write("\b" * (toolbar_width+1))
 
     # define an array to hold the data galaxy correlations
     DD = np.array([])
@@ -108,21 +108,71 @@ def three_dim_correlate(galaxies):
             Ntot += N         
         
         DD = np.append(DD, Ntot/2.)
-        if ii%(nsteps/toolbar_width) == 0:
-            sys.stdout.write("-")
-            sys.stdout.flush()
+        sys.stdout.write("\rDD:  {}%".format(100.*ii/nsteps))
 
     sys.stdout.write("\n")
-    print(DD)
-    plt.plot(np.linspace(0, maxR, nsteps),DD)
-    plt.show()
 
 
+    # now create a correlation function for a random sample of galaxies
+    DR = np.array([])
+    nGalaxies = 200
+    xmin, xmax = min(positions[:,0]), max(positions[:,0])
+    ymin, ymax = min(positions[:,1]), max(positions[:,1])
+    zmin, zmax = min(positions[:,2]), max(positions[:,2]) 
+
+    # create a positions list for the random sample of galaxies
+    randPositions = np.array([])
+    for ii in range(nGalaxies):
+        x = random.uniform(xmin, xmax)
+        y = random.uniform(ymin, ymax)
+        z = random.uniform(zmin, zmax)
+        newline = [x, y, z]
+        randPositions = np.append(randPositions, newline)
+    randPositions = np.reshape(randPositions, (-1, 3))
 
 
+    # now do this for all of the random positions
+    # loop through all distances
+    for ii in range(int(nsteps)):
+        R = ii*dr
+          
+        #loop through each of the data galaxies
+        Ntot = 0
+        for thisGal in range(len(randPositions[:,0])):
+            # create an empty array for the distances to this galaxy
+            distances = np.array([])
+            # loop through the other galaxies
+            for otherGal in range(len(positions[:,0])):
+                # make sure we are not counting the same galaxy
+                if thisGal != otherGal:
+                    # calculate the distance from thisgal to otherGal
+                    distance = np.sum((randPositions[thisGal]-positions[otherGal])**2)
+                    distances = np.append(distances, distance)
+
+            # find the number that are within R-dr/2 , R+dr/2
+            N = len(np.where(np.logical_and(distances>= R-dr/2., distances <= R+dr/2.))[0])
+            Ntot += N         
+        
+        DR = np.append(DR, Ntot/2.)
+        sys.stdout.write("\rDR:  {}%".format(100.*ii/nsteps))
+    sys.stdout.write("\n")
+
+    xi = nGalaxies/len(positions[:,0])*DD/DR-1
+    return xi
 
 
 
 if __name__=="__main__":
     print("----MAIN----")
-    three_dim_correlate(galaxy_read())
+    galaxies = galaxy_read()
+    totalXi = three_dim_correlate(galaxies)
+    nSamples = 10
+    for ii in range(nSamples-1):
+        print("Begin sample number: {}".format(ii+1))
+        totalXi += three_dim_correlate(galaxies)
+
+    totalXi = nSamples/nSamples
+    plt.plot(np.linspace(0, 40, len(totalXi)), totalXi)
+
+
+
