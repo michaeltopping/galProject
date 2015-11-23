@@ -1,4 +1,5 @@
 import numpy as np
+import random
 import matplotlib.pyplot as plt
 import os
 from scipy.optimize import curve_fit
@@ -7,7 +8,13 @@ from cosmology import *
 import scipy
 import time
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.colors import LinearSegmentedColormap 
 
+from matplotlib import rc
+
+
+rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
+rc('text', usetex=True)
 
 
 #Constants and conversions
@@ -50,8 +57,7 @@ def split_query(filename):
             outFile.close()
             outFile = open(outFilename, 'w')
 
-        outFile.write("{}   {}    {}    {}    {}    {}    {}\n".format(row[0], row[18], row[19],
-                                                    row[20], row[25], row[26], row[27]))
+        outFile.write("{}   {}    {}    {}    {}    {}    {}    {}\n".format(row[0], row[18], row[19],row[20], row[25], row[26], row[27], row[13]))
         
     
 
@@ -60,16 +66,19 @@ def split_query(filename):
 def read_halos(filename):
     # first read in the data from one of the files
     data = np.genfromtxt(filename, dtype=str)
+    mp = 8.6e8
 
 
     positions = np.array([])
     velocities = np.array([])
+    masses = np.array([])
     for row in data:
         # get the line in the positions array that will be added
         newline = [float(row[1]), float(row[2]), float(row[3])]
         newVelLine = [float(row[4]), float(row[5]), float(row[6])]
         positions = np.append(positions, newline)
         velocities = np.append(velocities, newVelLine)
+        masses = np.append(masses, float(row[7])*mp)
         
 
     # reshape the array to be a 3xN array
@@ -96,16 +105,20 @@ def read_halos(filename):
     totStartTime = time.time()
     for vert in vertList:
         starttime = time.time()
-        compute_histogram(np.array(rotate_galaxies(relPositions, vert).T), 
-                            np.array(rotate_galaxies(velocities, vert).T), vert)
-        print("Finished raytrace: {} in {:4f}s".format(str(ii)+"/"+str(N), time.time()-starttime))
+#        compute_histogram(np.array(rotate_galaxies(relPositions, vert).T), 
+#                            np.array(rotate_galaxies(velocities, vert).T), masses, vert)
+
+        scatter(np.array(rotate_galaxies(relPositions, vert).T),
+                            np.array(rotate_galaxies(velocities, vert).T), masses, vert)
+
+        print("Finished raytrace: {} in {:4f}s".format(str(ii+1)+"/"+str(N), time.time()-starttime))
         ii += 1
     print("Finished total computation in: {:4f}s".format(time.time()-totStartTime))
     plt.xlabel("a1/a2")
     plt.ylabel("c1-c2" )
     plt.xlim([0,1])
     plt.ylim([0,.1]) 
-    plt.show()
+#    plt.show()
 
 
 # return the uniformly distributed vertices on an icosahedron
@@ -145,7 +158,7 @@ def get_icovertices(Nsubdiv):
     theta = 0.
     phi = 0.
     nTheta = 1
-    nPhi = 360
+    nPhi = 1
     for itheta in range(nTheta):
         for iphi in range(nPhi):
             
@@ -197,11 +210,82 @@ def rotate_galaxies(positions, vertex):
     return positions
 
 
+# this will compute the 2d positional scatter plot of the data
+def scatter(positions, velocities, amsses, vert):
+    theta = vert[0]*180/np.pi
+    phi = vert[1]*180/np.pi
+
+    # cutoff mass for LBGs
+    LBGcutoff = 10**11.1
+
+    # occupation fraction of LAEs
+    LAEoccup = .1
+
+    # distance/redshift for the redshift center of the cluster, roughly
+    peakMidZ = 3.078
+    peakMidMpc = cmToMpc*DC(peakMidZ)
+
+    #define colormap
+    peakmin = 3.075
+    peakmax = 3.082
+    peakLimit = 3.078 
+    midPt = (peakLimit - peakmin) / (peakmax - peakmin) 
+ 
+    cdict = {'red':   ((0.0,  0.2, 0.0), 
+                       (midPt,  1.0, 1.0), 
+                       (1.0,  1.0, 1.0)), 
+ 
+             'green': ((0.0,  0.2, 0.0), 
+                       (midPt,  1.0, 1.0), 
+                       (1.0,  0.0, 0.0)), 
+ 
+             'blue':  ((0.0,  1.0, 1.0), 
+                       (midPt,  1.0, 1.0), 
+                       (1.0,  0.0, 0.0))} 
+    colorMap = LinearSegmentedColormap('BlueRed1', cdict)
+
+
+
+
+    for row, vel in zip(positions, velocities):
+        x = row[0]
+        # calculate the redshift here 
+        z = find_redshift(peakMidMpc+x)
+        # apply the galaxy velocity correction
+        z += (vel[0]/3e5)*(1+z)
+
+        size=50
+ 
+
+        plt.scatter(row[1], row[2],
+         vmin=cmToMpc*DC(peakmin)-cmToMpc*DC(peakLimit),
+         vmax=cmToMpc*DC(peakmax)-cmToMpc*DC(peakLimit),
+         c=cmToMpc*DC(z)-cmToMpc*DC(peakLimit),
+         cmap=colorMap, s=size, linewidth=.4)
+
+
+
+    plt.xlabel("[Mpc/h]", fontsize=16)
+    plt.ylabel("[Mpc/h]", fontsize=16)
+    plt.colorbar().set_label("z", fontsize=16)
+    plt.show()
+
+
+
+
+
 # given a set of data points compute the redshift histogram
-def compute_histogram(positions, velocities, vert):
+def compute_histogram(positions, velocities, masses, vert):
     theta = vert[0]*180/np.pi
     phi = vert[1]*180/np.pi
     # we will only really care about the x-positions
+
+
+    #the cutoff minimum mass for LBGs
+    LBGcutoff = 10**11.1
+    
+    #occupation fraction of LAEs
+    LAEoccup = .1
     
     # define the distance/redshift of the center of the cluster
     peakMidZ = 3.078
@@ -212,26 +296,32 @@ def compute_histogram(positions, velocities, vert):
 
     # loop through all rows in the position matrix and calculate the redshift
     #  of each object
-    for row, vel in zip(positions, velocities):
+    for row, vel, m in zip(positions, velocities, masses):
         x = row[0]
         # calculate the redshift here 
         z = find_redshift(peakMidMpc+x)
         # apply the galaxy velocity correction
         z += (vel[0]/3e5)*(1+z)
-        zs = np.append(zs, z)
+        if m < LBGcutoff:
+            if random.random() < LAEoccup:
+
+                zs = np.append(zs, z)
+        else: 
+            zs = np.append(zs, z)
 #    plt.savefig("./halo_images/"+str(time.time())+".png")
 #    plt.close()
     fitParam,  chisqr = fit_histogram(zs)
     print(chisqr)
 #    plt.scatter((min([a1,a2])/max([a1,a2])), abs(c1-c2), s=100/chisqr)
-    if chisqr < 100:
+    if chisqr < 101:
         x = np.linspace(3.0,3.2, 1000)
         Gauss = twoGauss(x, *fitParam)
         #plt.plot(x, Gauss, linewidth=3)
         plt.hist(zs, range=(3.07, 3.09), bins=20)
         plt.xlim([3.07, 3.09])
-        plt.ylim([0,15])
+        plt.ylim([0,25])
         plt.savefig("./halo_movie/"+str(theta)+"_"+str(phi)+".png")
+#        plt.show()
         plt.close()
 
 
@@ -240,7 +330,7 @@ def find_redshift(d, OmegaM=0.308, OmegaL=0.692):
     starttime = time.time()
     OmegaK = 1-OmegaM-OmegaL
     dz = 0.001
-    z = 2.9 
+    z = 3.0 
     dCalculated = 0
     while (dCalculated<d): 
         z += dz
@@ -290,5 +380,5 @@ def fit_histogram(zs):
 
 
 if __name__=="__main__":
-    split_query("./halos/testSQL.dat")
-    read_halos("./halos/testSQL_0.dat")
+    split_query("./halos/milliMilleniumSQL.dat")
+    read_halos("./halos/milliMilleniumSQL_0.dat")
