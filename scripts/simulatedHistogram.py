@@ -9,6 +9,7 @@ import scipy
 import time
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.colors import LinearSegmentedColormap 
+from matplotlib import cm
 
 from matplotlib import rc
 
@@ -30,6 +31,13 @@ def twoGauss(x, a1, c1, s1, a2, c2, s2):
         return 99999.9
     else:
         return a1*np.exp(-(x-c1)**2/(2*s1**2))+a2*np.exp(-(x-c2)**2/(2*s2**2))
+
+#define Gauss
+def Gauss(x, a1, c1, s1):
+    if s1 ==0:
+        return 99999.9
+    else:
+        return a1*np.exp(-(x-c1)**2/(2*s1**2))
 
 
 
@@ -101,18 +109,28 @@ def read_halos(filename):
     relPositions = np.reshape(relPositions, (-1,3))
 
 
-    vertList = get_icovertices(0) 
+    nTheta = 60
+    nPhi = 60
+    thetas = np.linspace(0, 2*np.pi, nTheta)
+    phis = np.linspace(0, 2*np.pi, nPhi)
+
+    # create the fs array, which will be thetas x phis
+    fs = np.array([])    
+
+ 
+    vertList = get_icovertices(0, thetas, phis) 
     N = len(vertList)
     ii = 0
     totStartTime = time.time()
     for vert in vertList:
         starttime = time.time()
-#        compute_histogram(np.array(rotate_galaxies(relPositions, vert).T), 
-#                            np.array(rotate_galaxies(velocities, vert).T), masses, vert, randoms)
+        f = compute_histogram(np.array(rotate_galaxies(relPositions, vert).T), 
+                            np.array(rotate_galaxies(velocities, vert).T), masses, vert, randoms)
 
 #        scatter(np.array(rotate_galaxies(relPositions, vert).T),
 #                            np.array(rotate_galaxies(velocities, vert).T), masses, vert, randoms)
 
+        fs = np.append(fs, f)
         print("Finished raytrace: {} in {:4f}s".format(str(ii+1)+"/"+str(N), time.time()-starttime))
         ii += 1
     print("Finished total computation in: {:4f}s".format(time.time()-totStartTime))
@@ -121,12 +139,25 @@ def read_halos(filename):
 #    plt.xlim([0,1])
 #    plt.ylim([0,.1]) 
 #    plt.show()
+    
+    # make the fs array a 2d array
+    fs = np.reshape(fs, (nPhi, nTheta))
+
+
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    thetas, phis = np.meshgrid(thetas, phis)
+    fs = np.clip(fs, 0, 999)
+    surf = ax.plot_wireframe(thetas, phis, fs)
+    ax.set_zlim(0, 2)
+    plt.show()
+
 
     return relPositions, velocities, masses, randoms
 
 
 # return the uniformly distributed vertices on an icosahedron
-def get_icovertices(Nsubdiv):
+def get_icovertices(Nsubdiv, thetas, phis):
     # first create a regular icosahedron
     vertList = np.array([])
 
@@ -159,19 +190,12 @@ def get_icovertices(Nsubdiv):
 #
 #    plt.show()
     vertList = np.array([])
-    theta = 0.
-    phi = 0.
-    nTheta = 1
-    nPhi = 1
-    for itheta in range(nTheta):
-        for iphi in range(nPhi):
+    for theta in thetas:
+        for phi in phis:
             
             #vertList = np.append(vertList, [cos(theta)*sin(phi), sin(theta)*sin(phi), cos(phi)])
             vertList = np.append(vertList, [theta, phi])
-            phi += 2*np.pi/nPhi
             
-        phi = 0
-        theta += 2*np.pi/nTheta
     vertList = np.reshape(vertList, (-1, 2))
     return vertList
 
@@ -300,31 +324,37 @@ def compute_histogram(positions, velocities, masses, vert, randoms):
     # loop through all rows in the position matrix and calculate the redshift
     #  of each object
     for row, vel, m, r in zip(positions, velocities, masses, randoms):
-        x = row[0]
-        # calculate the redshift here 
-        z = find_redshift(peakMidMpc+x)
-        # apply the galaxy velocity correction
-        z += (vel[0]/3e5)*(1+z)
         if m < LBGcutoff:
             if r < LAEoccup:
+
+                x = row[0]
+                # calculate the redshift here 
+                z = find_redshift(peakMidMpc+x)
+                # apply the galaxy velocity correction
+                z += (vel[0]/3e5)*(1+z)
 
                 zs = np.append(zs, z)
             
             #zs = np.append(zs, z)
 #    plt.savefig("./halo_images/"+str(time.time())+".png")
 #    plt.close()
-    fitParam,  chisqr = fit_histogram(zs)
+    fitParam,  chisqr = fit_histogram(zs, 2)
 #    plt.scatter((min([a1,a2])/max([a1,a2])), abs(c1-c2), s=100/chisqr)
     if chisqr < 101:
         x = np.linspace(3.0,3.2, 1000)
         Gauss = twoGauss(x, *fitParam)
         #plt.plot(x, Gauss, linewidth=3)
 #        plt.hist(zs, range=(3.07, 3.09), bins=20)
-        plt.hist(zs, range=(3.06, 3.09), bins=20)
-        plt.ylim([0, 25])
+#        plt.hist(zs, range=(3.06, 3.09), bins=20)
+#        plt.ylim([0, 25])
 #        plt.savefig("./halo_movie/"+str(theta)+"_"+str(phi)+".png")
-        plt.show()
-        plt.close()
+#        plt.show()
+#        plt.close()
+    return fcalc(zs)
+
+
+
+
 
 
 # this will calculate the redshift given a comoving distance
@@ -349,7 +379,7 @@ def find_redshift(d, OmegaM=0.308, OmegaL=0.692):
 
 
 # this will fit the histogram to a double gaussian
-def fit_histogram(zs):
+def fit_histogram(zs, npeaks):
     
     #find histogram statistics/fits
     hist, bin_edges = np.histogram(zs, range=(3.07, 3.09), bins=20)
@@ -357,14 +387,22 @@ def fit_histogram(zs):
     bin_centers = [0.5*(bin_edges[ii]+bin_edges[ii+1]) for ii in range(len(bin_edges)-1)]
     #find a fit to two gaussians
     try:
-        fitParam, fitCov = curve_fit(twoGauss, bin_centers, hist)
-        a1 = fitParam[0]
-        a2 = fitParam[3]
-        c1 = fitParam[1]
-        c2 = fitParam[4]
-        chisqr = 0
+        if npeaks == 2:
+            fitParam, fitCov = curve_fit(twoGauss, bin_centers, hist)
+            a1 = fitParam[0]
+            a2 = fitParam[3]
+            c1 = fitParam[1]
+            c2 = fitParam[4]
+            chisqr = 0
+        elif npeaks == 1:
+            fitParam, fitCov = curve_fit(Gauss, bin_centers, hist)
+            chisqr=0
+            
         for ii in range(len(bin_centers)):
-            chisqr += (hist[ii]-twoGauss(bin_centers[ii], *fitParam))**2/twoGauss(bin_centers[ii], *fitParam)
+            if npeaks == 2:
+                chisqr += (hist[ii]-twoGauss(bin_centers[ii], *fitParam))**2/twoGauss(bin_centers[ii], *fitParam)
+            elif npeaks == 1:
+                chisqr += (hist[ii]-Gauss(bin_centers[ii], *fitParam))**2/Gauss(bin_centers[ii], *fitParam)
 
     except RuntimeError:
         print("Error, no fit was found")
@@ -378,16 +416,61 @@ def fit_histogram(zs):
 
 
 
+
+# function to calculate f
+def fcalc(zs):
+    
+
+    # get the chisquared
+    # chi1 corresponds to double peaked, chi2 corresponds to single peaked
+    param1, chi1 = fit_histogram(zs, 2) 
+    param2, chi2 = fit_histogram(zs, 1)
+
+    # degrees of freedom in the fits
+    dof1 = 3
+    dof2 = 6
+    f = (( chi1 - chi2 ) / (dof1 - dof2)) / (chi2 / dof2)
+
+    if chi1 >= 100 or chi2 >= 100:
+        f = 0
+
+    return f
+
+
+
 # a function that will plot the halo mass function 
-def halo_mass_function(masses):
+def halo_mass_function(masses, randoms):
     mp = 8.6e8
+    #the cutoff minimum mass for LBGs
+    LBGcutoff = 10**11.1
+    
+    #occupation fraction of LAEs
+    LAEoccup = .1
 #    plt.figure()
-    plt.hist(masses, bins=np.logspace(10, 13, 30), histtype="step", color='black')
+    # change the masses array to account for missing LAEs
+    galMasses = np.array([])
+    for mass, r in zip(masses, randoms):
+        if mass < LBGcutoff:
+            if r < LAEoccup:
+                galMasses = np.append(galMasses, mass)
+        else:
+                galMasses = np.append(galMasses, mass)
+
+
+    
+    plt.hist(masses, bins=np.logspace(10, 13, 30), histtype="step", color='black', linestyle='dashed', label="Ntot={}".format(masses.size))
+    plt.hist(galMasses, bins=np.logspace(10, 13, 30), histtype="step", color='black', label="Ngalaxies={}".format(galMasses.size))
     plt.ylim([1,1e3])
     plt.gca().set_xscale("log")
     plt.gca().set_yscale("log")
-    plt.xlabel("Mass [M$_\odot$]")
-    plt.ylabel("N")
+    plt.xlabel("Mass [M$_\odot$]", fontsize=16)
+    plt.ylabel("N", fontsize=16)
+    plt.legend(loc='upper right')
+
+
+
+
+
 
 
 if __name__=="__main__":
@@ -397,14 +480,13 @@ if __name__=="__main__":
 
     for ii in range(18):
         relPositions, velocities, masses, randoms = read_halos("./halos/MillenniumSQL_Full_{}.dat".format(str(ii)))
-        halo_mass_function(masses)
+        halo_mass_function(masses, randoms)
+        # plot the LBG cutoff
+        plt.plot([10**11.1, 10**11.1], [0, 10**4], 'k--', linewidth=2)
 
-    # plot the LBG cutoff
-    plt.plot([10**11.1, 10**11.1], [0, 10**4], 'k--', linewidth=2)
-    # plot the LAE cutoff
-    plt.plot([10**10.6, 10**10.6], [0, 10**4], 'k:', linewidth=2)
+        plt.savefig("./HMFs/Halo_{}.png".format(ii), dpi=400)
+        plt.close()
 
-    plt.show()
 
 
 
