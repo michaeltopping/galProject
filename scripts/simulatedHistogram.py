@@ -71,7 +71,7 @@ def split_query(filename):
 
 
 # read in the halo data from one file
-def read_halos(filename):
+def read_halos(folder, filename):
     # first read in the data from one of the files
     data = np.genfromtxt(filename, dtype=str)
     mp = 8.6e8
@@ -109,13 +109,15 @@ def read_halos(filename):
     relPositions = np.reshape(relPositions, (-1,3))
 
 
-    nTheta = 60
-    nPhi = 60
+    nTheta = 10
+    nPhi = 10
     thetas = np.linspace(0, 2*np.pi, nTheta)
     phis = np.linspace(0, 2*np.pi, nPhi)
 
     # create the fs array, which will be thetas x phis
     fs = np.array([])    
+    amplitudes = np.array([])
+    widths = np.array([])
 
  
     vertList = get_icovertices(0, thetas, phis) 
@@ -124,13 +126,18 @@ def read_halos(filename):
     totStartTime = time.time()
     for vert in vertList:
         starttime = time.time()
-        f = compute_histogram(np.array(rotate_galaxies(relPositions, vert).T), 
+        # note that the parameters for single and double peaked fits
+        #  are switched here because I was to lazy to switch all following references
+        #  to them. :(
+        f, param2, param1 = compute_histogram(np.array(rotate_galaxies(relPositions, vert).T), 
                             np.array(rotate_galaxies(velocities, vert).T), masses, vert, randoms)
 
 #        scatter(np.array(rotate_galaxies(relPositions, vert).T),
 #                            np.array(rotate_galaxies(velocities, vert).T), masses, vert, randoms)
 
         fs = np.append(fs, f)
+        amplitudes = np.append(amplitudes, min(abs(param2[3]/param2[0]), abs(param2[0]/param2[3])))
+        widths = np.append(widths, min(abs(param2[2]/param2[5]), abs(param2[5]/param2[2])))
         print("Finished raytrace: {} in {:4f}s".format(str(ii+1)+"/"+str(N), time.time()-starttime))
         ii += 1
     print("Finished total computation in: {:4f}s".format(time.time()-totStartTime))
@@ -139,18 +146,93 @@ def read_halos(filename):
 #    plt.xlim([0,1])
 #    plt.ylim([0,.1]) 
 #    plt.show()
-    
+
+
+    # setup the information for saving histograms of good candidates
+    fileroot = filename[8:-4]
+    # create the folder for each cluster
+    print("Creating folder for halo: {}".format(folder))
+    if not os.path.exists("./halos/{}".format(folder)):
+        print("Folder does not exist")
+        os.makedirs("./halos/{}".format(folder))
+
     # make the fs array a 2d array
     fs = np.reshape(fs, (nPhi, nTheta))
+    amplitudes = np.reshape(amplitudes, (nPhi, nTheta))
+    widths = np.reshape(widths, (nPhi, nTheta))
+
+    
+
+    for theta in range(nTheta):
+        for phi in range(nPhi):
+
+            # create the figure
+            histFig = plt.figure()
+    
+            f = fs[theta][phi]
+            sigma = widths[theta][phi]
+            A = amplitudes[theta][phi]     
+            t = thetas[theta]
+            p = phis[phi]
+            # check if the sigma ratios are good
+            if sigma > 0.5:
+                # check if the amplitudes are comparable
+                if A > 0.5:
+                    # check if the f value is good
+                    if f > 0.05:
+                        #this should be a good one
+                        print("Good candidate at theta: {} phi: {}".format(p*180/np.pi, t*180/np.pi))
+                        
+
+                        # recalculate the histograms from the good angles
+                        vert = get_icovertices(0, [t], [p])[0]
+                        f, param1, param2 = compute_histogram(np.array(rotate_galaxies(relPositions, vert).T), 
+                            np.array(rotate_galaxies(velocities, vert).T), masses, vert, randoms)
+
+   
+
+                        plt.savefig("./{}/{}_t{:.0f}p{:.0f}.png".format(folder, fileroot, p*180/np.pi, 
+                                    t*180/np.pi))
 
 
+            # close the plot so they don't get redrawn on top of eachother
+            plt.close()
+
+    plt.close()
     fig = plt.figure()
-    ax = fig.gca(projection='3d')
-    thetas, phis = np.meshgrid(thetas, phis)
-    fs = np.clip(fs, 0, 999)
-    surf = ax.plot_wireframe(thetas, phis, fs)
-    ax.set_zlim(0, 2)
-    plt.show()
+#    ax = fig.gca(projection='3d')
+#    thetas, phis = np.meshgrid(thetas, phis)
+#    fs = np.clip(fs, 0, 999)
+#    surf = ax.plot_wireframe(thetas, phis, fs)
+#    ax.set_zlim(0, 2)
+#    ax.set_xlabel(r'$\theta$')
+#    ax.set_ylabel(r'$\phi$')
+    plt.pcolor(thetas*180/np.pi, phis*180/np.pi, fs, vmin=0)
+    plt.xlabel(r'$\theta$', fontsize=16)
+    plt.ylabel(r'$\phi$', fontsize=16)
+
+    plt.colorbar().set_label("f", fontsize=16)
+
+
+
+    fig1 = plt.figure()
+    plt.pcolor(thetas*180/np.pi, phis*180/np.pi, widths, vmin=0)
+    plt.xlabel(r'$\theta$', fontsize=16)
+    plt.ylabel(r'\phi$', fontsize=16)
+
+    plt.colorbar().set_label("Fractional $\sigma$", fontsize=16)
+    
+    fig2 = plt.figure()
+    plt.pcolor(thetas*180/np.pi, phis*180/np.pi, amplitudes, vmin=0)
+    plt.xlabel(r'$\theta$', fontsize=16)
+    plt.ylabel(r'\phi$', fontsize=16)
+
+    plt.colorbar().set_label("Fractionsl $A$", fontsize=16)
+
+    # show the figures of fractional gaussian parameters and f 
+#    plt.show()
+
+
 
 
     return relPositions, velocities, masses, randoms
@@ -209,7 +291,6 @@ def rotate_galaxies(positions, vertex):
 #        theta = np.pi/2. 
 #    else:
 #        theta = atan(vertex[0]/vertex[1]) 
-
     Rz = np.matrix([[cos(theta), -sin(theta), 0], [sin(theta), cos(theta), 0], [0, 0, 1]])
 
     phi = vertex[1]
@@ -344,9 +425,9 @@ def compute_histogram(positions, velocities, masses, vert, randoms):
         x = np.linspace(3.0,3.2, 1000)
         Gauss = twoGauss(x, *fitParam)
         #plt.plot(x, Gauss, linewidth=3)
-#        plt.hist(zs, range=(3.07, 3.09), bins=20)
-#        plt.hist(zs, range=(3.06, 3.09), bins=20)
-#        plt.ylim([0, 25])
+        plt.hist(zs, range=(3.07, 3.09), bins=20)
+        plt.hist(zs, range=(3.06, 3.09), bins=20)
+        plt.ylim([0, 25])
 #        plt.savefig("./halo_movie/"+str(theta)+"_"+str(phi)+".png")
 #        plt.show()
 #        plt.close()
@@ -423,18 +504,20 @@ def fcalc(zs):
 
     # get the chisquared
     # chi1 corresponds to double peaked, chi2 corresponds to single peaked
-    param1, chi1 = fit_histogram(zs, 2) 
-    param2, chi2 = fit_histogram(zs, 1)
+    param2, chi2 = fit_histogram(zs, 1) 
+    param1, chi1 = fit_histogram(zs, 2)
 
     # degrees of freedom in the fits
-    dof1 = 3
-    dof2 = 6
+    dof2 = 3
+    dof1 = 6
     f = (( chi1 - chi2 ) / (dof1 - dof2)) / (chi2 / dof2)
 
     if chi1 >= 100 or chi2 >= 100:
         f = 0
 
-    return f
+    zarr = np.linspace(3, 3.1, 100)
+    plt.plot(zarr, twoGauss(zarr, *param1))
+    return f, param1, param2
 
 
 
@@ -476,16 +559,17 @@ def halo_mass_function(masses, randoms):
 if __name__=="__main__":
     split_query("./halos/MillenniumSQL_Full.dat")
     
-    relPositions, velocities, masses, randoms = read_halos("./halos/MillenniumSQL_Full_0.dat")
+    relPositions, velocities, masses, randoms = read_halos(0,"./halos/MillenniumSQL_Full_0.dat")
 
-    for ii in range(18):
-        relPositions, velocities, masses, randoms = read_halos("./halos/MillenniumSQL_Full_{}.dat".format(str(ii)))
-        halo_mass_function(masses, randoms)
-        # plot the LBG cutoff
-        plt.plot([10**11.1, 10**11.1], [0, 10**4], 'k--', linewidth=2)
-
-        plt.savefig("./HMFs/Halo_{}.png".format(ii), dpi=400)
-        plt.close()
+#    # loop through each of the massive halos
+#    for ii in range(18):
+#        relPositions, velocities, masses, randoms = read_halos("./halos/MillenniumSQL_Full_{}.dat".format(str(ii)))
+#        halo_mass_function(masses, randoms)
+#        # plot the LBG cutoff
+#        plt.plot([10**11.1, 10**11.1], [0, 10**4], 'k--', linewidth=2)
+#
+#        plt.savefig("./HMFs/Halo_{}.png".format(ii), dpi=400)
+#        plt.close()
 
 
 
