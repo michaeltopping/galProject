@@ -109,10 +109,10 @@ def read_halos(folder, filename):
     relPositions = np.reshape(relPositions, (-1,3))
 
 
-    nTheta = 10
-    nPhi = 10
-    thetas = np.linspace(0, 2*np.pi, nTheta)
-    phis = np.linspace(0, 2*np.pi, nPhi)
+    nTheta = 24
+    nPhi = 24
+    thetas = np.linspace(0, 2*np.pi, nTheta, endpoint=False)
+    phis = np.linspace(0, 2*np.pi, nPhi, endpoint=False)
 
     # create the fs array, which will be thetas x phis
     fs = np.array([])    
@@ -175,7 +175,7 @@ def read_halos(folder, filename):
             t = thetas[theta]
             p = phis[phi]
             # check if the sigma ratios are good
-            if sigma > 0.5:
+            if sigma > 0.3:
                 # check if the amplitudes are comparable
                 if A > 0.5:
                     # check if the f value is good
@@ -183,16 +183,26 @@ def read_halos(folder, filename):
                         #this should be a good one
                         print("Good candidate at theta: {} phi: {}".format(p*180/np.pi, t*180/np.pi))
                         
-
+                        # create the figure
+                        plt.figure(figsize=(10,5))
                         # recalculate the histograms from the good angles
                         vert = get_icovertices(0, [t], [p])[0]
+                        ax = plt.subplot(1,2,1)
                         f, param1, param2 = compute_histogram(np.array(rotate_galaxies(relPositions, vert).T), 
                             np.array(rotate_galaxies(velocities, vert).T), masses, vert, randoms)
 
    
 
-                        plt.savefig("./{}/{}_t{:.0f}p{:.0f}.png".format(folder, fileroot, p*180/np.pi, 
+
+                        ax2 = plt.subplot(1,2,2)
+                        # create a scatter plot of the cluster that has favorable qualities
+                        scatter(np.array(rotate_galaxies(relPositions, vert).T), 
+                                np.array(rotate_galaxies(velocities, vert).T), masses, vert, randoms)
+
+                        plt.savefig("./halos/{}/{}_t{:.0f}p{:.0f}_s.png".format(folder, fileroot, p*180/np.pi, 
                                     t*180/np.pi))
+                        plt.close()
+
 
 
             # close the plot so they don't get redrawn on top of eachother
@@ -376,7 +386,6 @@ def scatter(positions, velocities, masses, vert, randoms):
     plt.xlabel("[arcmin]", fontsize=16)
     plt.ylabel("[arcmin]", fontsize=16)
     plt.colorbar().set_label("z", fontsize=16)
-    plt.show()
 
 
 
@@ -425,9 +434,9 @@ def compute_histogram(positions, velocities, masses, vert, randoms):
         x = np.linspace(3.0,3.2, 1000)
         Gauss = twoGauss(x, *fitParam)
         #plt.plot(x, Gauss, linewidth=3)
-        plt.hist(zs, range=(3.07, 3.09), bins=20)
+#        plt.hist(zs, range=(3.07, 3.09), bins=20)
         plt.hist(zs, range=(3.06, 3.09), bins=20)
-        plt.ylim([0, 25])
+#        plt.ylim([0, 25])
 #        plt.savefig("./halo_movie/"+str(theta)+"_"+str(phi)+".png")
 #        plt.show()
 #        plt.close()
@@ -443,7 +452,7 @@ def find_redshift(d, OmegaM=0.308, OmegaL=0.692):
     starttime = time.time()
     OmegaK = 1-OmegaM-OmegaL
     dz = 0.001
-    z = 3.0 
+    z = 3.05 
     dCalculated = 0
     while (dCalculated<d): 
         z += dz
@@ -463,7 +472,7 @@ def find_redshift(d, OmegaM=0.308, OmegaL=0.692):
 def fit_histogram(zs, npeaks):
     
     #find histogram statistics/fits
-    hist, bin_edges = np.histogram(zs, range=(3.07, 3.09), bins=20)
+    hist, bin_edges = np.histogram(zs, range=(3.06, 3.09), bins=20)
     #find the bin centers
     bin_centers = [0.5*(bin_edges[ii]+bin_edges[ii+1]) for ii in range(len(bin_edges)-1)]
     #find a fit to two gaussians
@@ -515,8 +524,8 @@ def fcalc(zs):
     if chi1 >= 100 or chi2 >= 100:
         f = 0
 
-    zarr = np.linspace(3, 3.1, 100)
-    plt.plot(zarr, twoGauss(zarr, *param1))
+    zarr = np.linspace(3.06, 3.09, 100)
+    plt.plot(zarr, twoGauss(zarr, *param1), 'k', linewidth=2)
     return f, param1, param2
 
 
@@ -557,19 +566,22 @@ def halo_mass_function(masses, randoms):
 
 
 if __name__=="__main__":
-    split_query("./halos/MillenniumSQL_Full.dat")
+    # this will split up each of the individual descendant halos, and willl result
+    #  in the random numbers being re-generated
+#    split_query("./halos/MillenniumSQL_Full.dat")
     
-    relPositions, velocities, masses, randoms = read_halos(0,"./halos/MillenniumSQL_Full_0.dat")
+#    relPositions, velocities, masses, randoms = read_halos(0,"./halos/MillenniumSQL_Full_0.dat")
 
 #    # loop through each of the massive halos
-#    for ii in range(18):
-#        relPositions, velocities, masses, randoms = read_halos("./halos/MillenniumSQL_Full_{}.dat".format(str(ii)))
+    for ii in range(18):
+        relPositions, velocities, masses, randoms = read_halos(ii,"./halos/MillenniumSQL_Full_{}.dat".format(str(ii)))
 #        halo_mass_function(masses, randoms)
 #        # plot the LBG cutoff
 #        plt.plot([10**11.1, 10**11.1], [0, 10**4], 'k--', linewidth=2)
 #
 #        plt.savefig("./HMFs/Halo_{}.png".format(ii), dpi=400)
 #        plt.close()
+
 
 
 
