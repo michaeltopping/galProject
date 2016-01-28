@@ -10,7 +10,7 @@ import time
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.colors import LinearSegmentedColormap 
 from matplotlib import cm
-
+import operator
 from matplotlib import rc
 
 
@@ -333,11 +333,104 @@ def scatter(positions, velocities, masses, vert, randoms):
     theta = vert[0]*180/np.pi
     phi = vert[1]*180/np.pi
 
-    # cutoff mass for LBGs
-    LBGcutoff = 10**11.1
 
-    # occupation fraction of LAEs
+
+
+    # sort the lists based on mass
+    zippedList = list(zip(masses, positions, velocities, randoms))
+    zippedList = sorted(zippedList, key = lambda x: x[0])
+    positions = np.array([])
+    velocities = np.array([])
+    masses = np.array([])
+    randoms = np.array([])
+    for entry in zippedList:
+        positions = np.append(positions, entry[1])  
+        masses = np.append(masses, entry[0])  
+        velocities = np.append(velocities, entry[2])  
+        randoms = np.append(randoms, entry[3])  
+        # the lists are now sorted
+        
+    # reshape the arrays to be 3xwhatever
+    positions = np.reshape(positions, (-1,3)) 
+    velocities = np.reshape(positions, (-1,3))
+    # define the number of laes and lbgs that will be present in the histogram
+    nLAE = 100
+    nLBG = 50
+    # we will always choose the most massive halo to be an LBG
+    nLBG -= 1
+
+
+    #the cutoff minimum mass for LBGs
+    LBGcutoff = 10**11.1
+    # index of the cutoff
+    LBGcutoffind = np.argmin(abs(masses-LBGcutoff))
+    
+    #occupation fraction of LAEs
     LAEoccup = .1
+    
+    # define the distance/redshift of the center of the cluster
+    peakMidZ = 3.078
+    peakMidMpc = cmToMpc*DC(peakMidZ)
+
+    # pick out the arrays that will be used to find the LBGs and LAEs
+    # LBG arrays
+    LBGpos = np.array([])
+    LBGvels = np.array([])
+    LBGmass=np.array([])
+    LBGrands = np.array([])
+    # LAE arrays
+    LAEpos = np.array([])
+    LAEvels = np.array([])
+    LAEmass=np.array([])
+    LAErands = np.array([])
+
+    # loop through the full lists and pick out the n with the lowest random numbers
+    #  then assign the results 
+    for ii in range(nLBG):
+        # pick out the next LBG
+        LBG = np.argmin(randoms[1:LBGcutoff])    
+        LBGpos = np.append(LBGpos, positions[LBG])
+        LBGvels = np.append(LBGvels, velocities[LBG])
+        LBGmass=np.append(LBGmass, masses[LBG])
+        LBGrands = np.append(LBGrands, randoms[LBG])
+        # remove the taken LBG
+        positions = np.delete(positions, LBG, 0)  
+        masses = np.delete(masses, LBG, 0)  
+        velocities = np.delete(velocities, LBG, 0)  
+        randoms = np.delete(randoms, LBG, 0)  
+       
+
+        # there are a different number of elements above the cutoff now
+        LBGcutoff -= 1
+        
+
+    # loop through the LAEs
+    for jj in range(nLAE):
+        LAE = np.argmin(randoms[1:]) 
+        # pick out the next LAE
+        LAEpos = np.append(LAEpos, positions[LAE])
+        LAEvels = np.append(LAEvels, velocities[LAE])
+        LAEmass=np.append(LAEmass, masses[LAE])
+        LAErands = np.append(LAErands, randoms[LAE])
+
+        # remove the taken LAE
+        positions = np.delete(positions, LAE, 0)  
+        masses = np.delete(masses, LAE, 0)  
+        velocities = np.delete(velocities, LAE, 0)  
+        randoms = np.delete(randoms, LAE, 0)  
+ 
+    # reshape arrays
+    LBGpos = np.reshape(LBGpos, (-1, 3))
+    LBGvels = np.reshape(LBGvels, (-1,3))
+    LAEpos = np.reshape(LAEpos, (-1,3))
+    LAEvels = np.reshape(LAEvels, (-1, 3))
+
+    # these are the final arrays with all of the LAE/LBG galaxies       
+    galPos = np.reshape(np.append(LAEpos, LBGpos), (-1, 3))
+    galVel = np.reshape(np.append(LAEvels, LBGvels), (-1, 3))
+
+
+
 
     # distance/redshift for the redshift center of the cluster, roughly
     peakMidZ = 3.078
@@ -365,7 +458,7 @@ def scatter(positions, velocities, masses, vert, randoms):
 
 
 
-    for row, vel, m, r in zip(positions, velocities, masses, randoms):
+    for row, vel in zip(galPos, galVel):
         x = row[0]
         # calculate the redshift here 
         z = find_redshift(peakMidMpc+x)
@@ -373,13 +466,10 @@ def scatter(positions, velocities, masses, vert, randoms):
         z += (vel[0]/3e5)*(1+z)
 
         size=50
-        if m < LBGcutoff:
-            if r < LAEoccup:
-
-                plt.scatter(row[1]/(7.78e-3)/60, row[2]/(7.78e-3)/60.,
-                 vmin = 3.07, vmax=3.083,
-                 c=z,
-                 cmap=colorMap, s=size, linewidth=.4)
+        plt.scatter(row[1]/(7.78e-3)/60, row[2]/(7.78e-3)/60.,
+        vmin = 3.07, vmax=3.083,
+        c=z,
+        cmap=colorMap, s=size, linewidth=.4)
 
 
 
@@ -397,9 +487,34 @@ def compute_histogram(positions, velocities, masses, vert, randoms):
     phi = vert[1]*180/np.pi
     # we will only really care about the x-positions
 
+    # sort the lists based on mass
+    zippedList = list(zip(masses, positions, velocities, randoms))
+    zippedList = sorted(zippedList, key = lambda x: x[0])
+    positions = np.array([])
+    velocities = np.array([])
+    masses = np.array([])
+    randoms = np.array([])
+    for entry in zippedList:
+        positions = np.append(positions, entry[1])  
+        masses = np.append(masses, entry[0])  
+        velocities = np.append(velocities, entry[2])  
+        randoms = np.append(randoms, entry[3])  
+        # the lists are now sorted
+        
+    # reshape the arrays to be 3xwhatever
+    positions = np.reshape(positions, (-1,3)) 
+    velocities = np.reshape(positions, (-1,3))
+    # define the number of laes and lbgs that will be present in the histogram
+    nLAE = 100
+    nLBG = 50
+    # we will always choose the most massive halo to be an LBG
+    nLBG -= 1
+
 
     #the cutoff minimum mass for LBGs
     LBGcutoff = 10**11.1
+    # index of the cutoff
+    LBGcutoffind = np.argmin(abs(masses-LBGcutoff))
     
     #occupation fraction of LAEs
     LAEoccup = .1
@@ -408,24 +523,80 @@ def compute_histogram(positions, velocities, masses, vert, randoms):
     peakMidZ = 3.078
     peakMidMpc = cmToMpc*DC(peakMidZ)
 
+    # pick out the arrays that will be used to find the LBGs and LAEs
+    # LBG arrays
+    LBGpos = np.array([])
+    LBGvels = np.array([])
+    LBGmass=np.array([])
+    LBGrands = np.array([])
+    # LAE arrays
+    LAEpos = np.array([])
+    LAEvels = np.array([])
+    LAEmass=np.array([])
+    LAErands = np.array([])
+
+    # loop through the full lists and pick out the n with the lowest random numbers
+    #  then assign the results 
+    for ii in range(nLBG):
+        # pick out the next LBG
+        LBG = np.argmin(randoms[1:LBGcutoff])    
+        LBGpos = np.append(LBGpos, positions[LBG])
+        LBGvels = np.append(LBGvels, velocities[LBG])
+        LBGmass=np.append(LBGmass, masses[LBG])
+        LBGrands = np.append(LBGrands, randoms[LBG])
+        # remove the taken LBG
+        positions = np.delete(positions, LBG, 0)  
+        masses = np.delete(masses, LBG, 0)  
+        velocities = np.delete(velocities, LBG, 0)  
+        randoms = np.delete(randoms, LBG, 0)  
+       
+
+        # there are a different number of elements above the cutoff now
+        LBGcutoff -= 1
+        
+
+    # loop through the LAEs
+    for jj in range(nLAE):
+        LAE = np.argmin(randoms[1:]) 
+        # pick out the next LAE
+        LAEpos = np.append(LAEpos, positions[LAE])
+        LAEvels = np.append(LAEvels, velocities[LAE])
+        LAEmass=np.append(LAEmass, masses[LAE])
+        LAErands = np.append(LAErands, randoms[LAE])
+
+        # remove the taken LAE
+        positions = np.delete(positions, LAE, 0)  
+        masses = np.delete(masses, LAE, 0)  
+        velocities = np.delete(velocities, LAE, 0)  
+        randoms = np.delete(randoms, LAE, 0)  
+ 
+    # reshape arrays
+    LBGpos = np.reshape(LBGpos, (-1, 3))
+    LBGvels = np.reshape(LBGvels, (-1,3))
+    LAEpos = np.reshape(LAEpos, (-1,3))
+    LAEvels = np.reshape(LAEvels, (-1, 3))
+
+    # these are the final arrays with all of the LAE/LBG galaxies       
+    galPos = np.reshape(np.append(LAEpos, LBGpos), (-1, 3))
+    galVel = np.reshape(np.append(LAEvels, LBGvels), (-1, 3))
+
+    
+
     # array to hold the z data
     zs = np.array([])
 
     # loop through all rows in the position matrix and calculate the redshift
     #  of each object
-    for row, vel, m, r in zip(positions, velocities, masses, randoms):
-        if m < LBGcutoff:
-            if r < LAEoccup:
+    for row, vel in zip(galPos, galVel):
 
-                x = row[0]
-                # calculate the redshift here 
-                z = find_redshift(peakMidMpc+x)
-                # apply the galaxy velocity correction
-                z += (vel[0]/3e5)*(1+z)
+        x = row[0]
+        # calculate the redshift here 
+        z = find_redshift(peakMidMpc+x)
+        # apply the galaxy velocity correction
+        z += (vel[0]/3e5)*(1+z)
 
-                zs = np.append(zs, z)
+        zs = np.append(zs, z)
             
-            #zs = np.append(zs, z)
 #    plt.savefig("./halo_images/"+str(time.time())+".png")
 #    plt.close()
     fitParam,  chisqr = fit_histogram(zs, 2)
@@ -435,7 +606,7 @@ def compute_histogram(positions, velocities, masses, vert, randoms):
         Gauss = twoGauss(x, *fitParam)
         #plt.plot(x, Gauss, linewidth=3)
 #        plt.hist(zs, range=(3.07, 3.09), bins=20)
-        plt.hist(zs, range=(3.06, 3.09), bins=20)
+        plt.hist(zs, range=(3.05, 3.12), bins=30)
 #        plt.ylim([0, 25])
 #        plt.savefig("./halo_movie/"+str(theta)+"_"+str(phi)+".png")
 #        plt.show()
@@ -472,7 +643,7 @@ def find_redshift(d, OmegaM=0.308, OmegaL=0.692):
 def fit_histogram(zs, npeaks):
     
     #find histogram statistics/fits
-    hist, bin_edges = np.histogram(zs, range=(3.06, 3.09), bins=20)
+    hist, bin_edges = np.histogram(zs, range=(3.05, 3.12), bins=30)
     #find the bin centers
     bin_centers = [0.5*(bin_edges[ii]+bin_edges[ii+1]) for ii in range(len(bin_edges)-1)]
     #find a fit to two gaussians
