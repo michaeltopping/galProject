@@ -60,6 +60,7 @@ def find_fof(filename):
     nCluster = 0
     # loop through the rows to create the list of first halos in fof groups
     for row in data:
+        print(nCluster, len(groups)) 
         if currentDesId == row[0]:
             if not row[10] in fofIDs:
                 fofIDs[row[10]] = nfof
@@ -80,10 +81,15 @@ def find_fof(filename):
             fofIDs[row[10]] = nfof
             nfof += 1
             nCluster += 1
-            print(currentDesId)
-       
-        
 
+
+
+    for entry in data:
+        if entry[0] == currentDesId:
+            groups[entry[2]] = fofIDs[entry[10]]
+
+      
+        
     pickle.dump((fofIDs,groups), open("./halos/fof_groupIDs_{}.p".format(nCluster), "wb"))
         
         
@@ -908,12 +914,12 @@ if __name__=="__main__":
     # this will split up each of the individual descendant halos, and willl result
     #  in the random numbers being re-generated
 #    split_query("./halos/MillenniumSQL_Full.dat")
-    find_fof("./halos/MillenniumSQL_Full.dat")    
+#    find_fof("./halos/MillenniumSQL_Full.dat")    
 #    relPositions, velocities, masses, randoms = read_halos(0,"./halos/MillenniumSQL_Full_0.dat")
 
 #    # loop through each of the massive halos
-#    for ii in range(18):
-#        relPositions, velocities, masses, randoms = read_halos(ii,"./halos/MillenniumSQL_Full_{}.dat".format(str(ii)))
+    for ii in range(18):
+        relPositions, velocities, masses, randoms = read_halos(ii,"./halos/MillenniumSQL_Full_{}.dat".format(str(ii)))
 
 #        halo_mass_function(masses, randoms)
 #        # plot the LBG cutoff
