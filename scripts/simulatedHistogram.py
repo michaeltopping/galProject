@@ -171,8 +171,8 @@ def read_halos(folder, filename):
     relPositions = np.reshape(relPositions, (-1,3))
 
 
-    nTheta = 5
-    nPhi = 5
+    nTheta = 10
+    nPhi = 10
     thetas = np.linspace(0, 2*np.pi, nTheta, endpoint=False)
     phis = np.linspace(0, 2*np.pi, nPhi, endpoint=False)
 
@@ -188,6 +188,12 @@ def read_halos(folder, filename):
     totStartTime = time.time()
     for vert in vertList:
         starttime = time.time()
+
+        # here we will find the galaxies that are within the most optimal field of veiw in the 
+        #  millennium simulation
+#        fovIndices = get_fov(np.array(rotate_galaxies(relPositions, vert).T))
+        
+
         # note that the parameters for single and double peaked fits
         #  are switched here because I was to lazy to switch all following references
         #  to them. :(
@@ -237,33 +243,46 @@ def read_halos(folder, filename):
             t = thetas[theta]
             p = phis[phi]
             # check if the sigma ratios are good
-            if sigma > 0.3:
-                # check if the amplitudes are comparable
-                if A > 0.5:
-                    # check if the f value is good
-                    if f > 0.05:
+#            if sigma > 0.3:
+#                # check if the amplitudes are comparable
+#                if A > 0.5:
+#                    # check if the f value is good
+#                    if f > 0.05:
                         #this should be a good one
-                        print("Good candidate at theta: {} phi: {}".format(p*180/np.pi, t*180/np.pi))
-                        
-                        # create the figure
-                        plt.figure(figsize=(10,5))
-                        # recalculate the histograms from the good angles
-                        vert = get_icovertices(0, [t], [p])[0]
-                        ax = plt.subplot(1,2,1)
-                        f, param1, param2 = compute_histogram(np.array(rotate_galaxies(relPositions, vert).T), 
-                            np.array(rotate_galaxies(velocities, vert).T), masses, vert, randoms, haloIDs, folder)
+            print("Good candidate at theta: {} phi: {}".format(p*180/np.pi, t*180/np.pi))
+            
+            # create the figure
+            plt.figure(figsize=(10,10))
+            # recalculate the histograms from the good angles
+            vert = get_icovertices(0, [t], [p])[0]
 
-   
+            # here we will find the galaxies that are within the most optimal field of veiw in the 
+            #  millennium simulation
+            fovIndices = get_fov(np.array(rotate_galaxies(relPositions, vert).T))
+            print("fovIndices: {}".format(fovindices))
+ 
+            relPositions = relPositions[fovIndices]
+            velocities = velocities[fovIndices]
+            masses = masses[fovIndices]
+            randoms = randoms[fovIndices]
+            haloIDs = haloIDs[fovIndices]
 
 
-                        ax2 = plt.subplot(1,2,2)
-                        # create a scatter plot of the cluster that has favorable qualities
-                        scatter(np.array(rotate_galaxies(relPositions, vert).T), 
-                                np.array(rotate_galaxies(velocities, vert).T), masses, vert, randoms, haloIDs, folder)
+            ax = plt.subplot(2,2,1)
+            f, param1, param2 = compute_histogram(np.array(rotate_galaxies(relPositions, vert).T), 
+                np.array(rotate_galaxies(velocities, vert).T), masses, vert, randoms, haloIDs, folder)
 
-                        plt.savefig("./halos/{}/{}_t{:.0f}p{:.0f}_s.png".format(folder, fileroot, p*180/np.pi, 
-                                    t*180/np.pi))
-                        plt.close()
+
+
+
+            ax2 = plt.subplot(2,2,2)
+            # create a scatter plot of the cluster that has favorable qualities
+            scatter(np.array(rotate_galaxies(relPositions, vert).T), 
+                    np.array(rotate_galaxies(velocities, vert).T), masses, vert, randoms, haloIDs, folder)
+
+            plt.savefig("./halos/{}/{}_t{:.0f}p{:.0f}_s.png".format(folder, fileroot, p*180/np.pi, 
+                        t*180/np.pi))
+            plt.close()
 
 
 
@@ -428,6 +447,7 @@ def scatter(positions, velocities, masses, vert, randoms, haloIDs, ii):
 
 
     
+    
 
 
     # sort the lists based on mass
@@ -450,8 +470,6 @@ def scatter(positions, velocities, masses, vert, randoms, haloIDs, ii):
     # define the number of laes and lbgs that will be present in the histogram
     nLAE = 116
     nLBG = 86
-    # we will always choose the most massive halo to be an LBG
-    nLBG -= 1
 
 
     #the cutoff minimum mass for LBGs
@@ -480,44 +498,88 @@ def scatter(positions, velocities, masses, vert, randoms, haloIDs, ii):
     LAErands = np.array([])
     LAEIDs = np.array([])
 
+
+    # loop through all of the halos and add all of the ones that are in the 
+    #  first or second most massive halos
+#    deletes = np.array([])
+#    for ii in range(randoms.size):
+#        if ( groups[str(int(haloIDs[ii]))] == maxs[0] ):
+#            LBG = ii
+#            LBGpos = np.append(LBGpos, positions[LBG])
+#            LBGvels = np.append(LBGvels, velocities[LBG])
+#            LBGmass=np.append(LBGmass, masses[LBG])
+#            LBGrands = np.append(LBGrands, randoms[LBG])
+#            LBGIDs = np.append(LBGIDs, haloIDs[LBG])
+#            deletes = np.append(deletes, LBG)
+#            nLBG -= 1
+#        
+#        if ( groups[str(int(haloIDs[ii]))] == maxs[1] ):
+#            LBG = ii
+#            LBGpos = np.append(LBGpos, positions[LBG])
+#            LBGvels = np.append(LBGvels, velocities[LBG])
+#            LBGmass=np.append(LBGmass, masses[LBG])
+#            LBGrands = np.append(LBGrands, randoms[LBG])
+#            LBGIDs = np.append(LBGIDs, haloIDs[LBG])
+#            deletes = np.append(deletes, LBG)
+#            nLBG -= 1
+#
+#
+#
+#    # delete the LBGs that were used in the massive halos
+#    for d in np.sort(deletes)[::-1]:
+#        positions = np.delete(positions, d, 0)  
+#        masses = np.delete(masses, d, 0)  
+#        velocities = np.delete(velocities, d, 0)  
+#        randoms = np.delete(randoms, d, 0)  
+#        haloIDs = np.delete(haloIDs, d, 0)
+ 
+
+
+
     # loop through the full lists and pick out the n with the lowest random numbers
     #  then assign the results 
     for ii in range(nLBG):
-        # pick out the next LBG
-        LBG = np.argmin(randoms[1:LBGcutoff])    
-        LBGpos = np.append(LBGpos, positions[LBG])
-        LBGvels = np.append(LBGvels, velocities[LBG])
-        LBGmass=np.append(LBGmass, masses[LBG])
-        LBGrands = np.append(LBGrands, randoms[LBG])
-        LBGIDs = np.append(LBGIDs, haloIDs[LBG])
-        # remove the taken LBG
-        positions = np.delete(positions, LBG, 0)  
-        masses = np.delete(masses, LBG, 0)  
-        velocities = np.delete(velocities, LBG, 0)  
-        randoms = np.delete(randoms, LBG, 0)  
-        haloIDs = np.delete(haloIDs, LBG, 0)
-       
+        # check if there are enough left
+        if randoms.shape[0] > 0:
+            # pick out the next LBG
+            LBG = np.argmin(randoms[1:LBGcutoff])    
+            LBGpos = np.append(LBGpos, positions[LBG])
+            LBGvels = np.append(LBGvels, velocities[LBG])
+            LBGmass=np.append(LBGmass, masses[LBG])
+            LBGrands = np.append(LBGrands, randoms[LBG])
+            LBGIDs = np.append(LBGIDs, haloIDs[LBG])
+            # remove the taken LBG
+            positions = np.delete(positions, LBG, 0)  
+            masses = np.delete(masses, LBG, 0)  
+            velocities = np.delete(velocities, LBG, 0)  
+            randoms = np.delete(randoms, LBG, 0)  
+            haloIDs = np.delete(haloIDs, LBG, 0)
+           
 
-        # there are a different number of elements above the cutoff now
-        LBGcutoff -= 1
+            # there are a different number of elements above the cutoff now
+            LBGcutoff -= 1
         
 
     # loop through the LAEs
     for jj in range(nLAE):
-        LAE = np.argmin(randoms[1:]) 
-        # pick out the next LAE
-        LAEpos = np.append(LAEpos, positions[LAE])
-        LAEvels = np.append(LAEvels, velocities[LAE])
-        LAEmass=np.append(LAEmass, masses[LAE])
-        LAErands = np.append(LAErands, randoms[LAE])
-        LAEIDs = np.append(LAEIDs, haloIDs[LAE])
 
-        # remove the taken LAE
-        positions = np.delete(positions, LAE, 0)  
-        masses = np.delete(masses, LAE, 0)  
-        velocities = np.delete(velocities, LAE, 0)  
-        randoms = np.delete(randoms, LAE, 0)  
-        haloIDs = np.delete(haloIDs, LAE, 0)
+        # check if there are enough galaxies left
+        if randoms.shape[0] > 0:
+
+            LAE = np.argmin(randoms[1:]) 
+            # pick out the next LAE
+            LAEpos = np.append(LAEpos, positions[LAE])
+            LAEvels = np.append(LAEvels, velocities[LAE])
+            LAEmass=np.append(LAEmass, masses[LAE])
+            LAErands = np.append(LAErands, randoms[LAE])
+            LAEIDs = np.append(LAEIDs, haloIDs[LAE])
+
+            # remove the taken LAE
+            positions = np.delete(positions, LAE, 0)  
+            masses = np.delete(masses, LAE, 0)  
+            velocities = np.delete(velocities, LAE, 0)  
+            randoms = np.delete(randoms, LAE, 0)  
+            haloIDs = np.delete(haloIDs, LAE, 0)
  
     # reshape arrays
     LBGpos = np.reshape(LBGpos, (-1, 3))
@@ -560,17 +622,17 @@ def scatter(positions, velocities, masses, vert, randoms, haloIDs, ii):
 
 
     for row, vel, haloId in zip(galPos, galVel, galIDs):
-        haloId = str(int(haloId)) 
-        # find the plotting parameters based on the fof group   
-        if groups[haloId] == maxs[0]:
-            sym = 's' 
-            size=70
-        elif groups[haloId] == maxs[1]:
-            sym = '^' 
-            size=70
-        else:
-            sym = 'o'
-            size=25
+#        haloId = str(int(haloId)) 
+#        # find the plotting parameters based on the fof group   
+#        if groups[haloId] == maxs[0]:
+#            sym = 's' 
+#            size=70
+#        elif groups[haloId] == maxs[1]:
+#            sym = '^' 
+#            size=70
+#        else:
+#            sym = 'o'
+#            size=25
             
 
         x = row[0]
@@ -581,8 +643,8 @@ def scatter(positions, velocities, masses, vert, randoms, haloIDs, ii):
 
         plt.scatter(row[1]/(7.78e-3)/60, row[2]/(7.78e-3)/60., 
         vmin = 3.07, vmax=3.083,
-        c=z, marker=sym,
-        cmap=colorMap, s=size, linewidth=.4)
+        c=z, marker='o',
+        cmap=colorMap, s=40, linewidth=.4)
 
 
 
@@ -621,19 +683,12 @@ def compute_histogram(positions, velocities, masses, vert, randoms, haloIDs, ii)
         else:
             fofMasses[groups[groupId]] += mass
 
-    
+     
 
     nmaxs = 2
     maxs = [x[0] for x in sorted(fofMasses.items(), key = operator.itemgetter(1), reverse=True)[0:nmaxs]]
     print("Maxs:{}".format(maxs))
-    try:
-        print("Found maxs with mass:{},{}; {},{}".format(maxs[0], fofMasses[maxs[0]],maxs[1], fofMasses[maxs[1]]))
-    except IndexError:
-        print(fofIds)
-        print(fofMasses)
-        print(groups)
-
-        exit()
+    print("Found maxs with mass:{},{}; {},{}".format(maxs[0], fofMasses[maxs[0]],maxs[1], fofMasses[maxs[1]]))
 
 
     
@@ -659,8 +714,6 @@ def compute_histogram(positions, velocities, masses, vert, randoms, haloIDs, ii)
     # define the number of laes and lbgs that will be present in the histogram
     nLAE = 116
     nLBG = 86
-    # we will always choose the most massive halo to be an LBG
-    nLBG -= 1
 
 
     #the cutoff minimum mass for LBGs
@@ -689,50 +742,101 @@ def compute_histogram(positions, velocities, masses, vert, randoms, haloIDs, ii)
     LAErands = np.array([])
     LAEIDs = np.array([])
 
+
+
+    # loop through all of the halos and add all of the ones that are in the 
+    #  first or second most massive halos
+#    deletes = np.array([])
+#    for ii in range(randoms.size):
+#        if ( groups[str(int(haloIDs[ii]))] == maxs[0] ):
+#            LBG = ii
+#            LBGpos = np.append(LBGpos, positions[LBG])
+#            LBGvels = np.append(LBGvels, velocities[LBG])
+#            LBGmass=np.append(LBGmass, masses[LBG])
+#            LBGrands = np.append(LBGrands, randoms[LBG])
+#            LBGIDs = np.append(LBGIDs, haloIDs[LBG])
+#            deletes = np.append(deletes, LBG)
+#            nLBG -= 1
+#        
+#        if ( groups[str(int(haloIDs[ii]))] == maxs[1] ):
+#            LBG = ii
+#            LBGpos = np.append(LBGpos, positions[LBG])
+#            LBGvels = np.append(LBGvels, velocities[LBG])
+#            LBGmass=np.append(LBGmass, masses[LBG])
+#            LBGrands = np.append(LBGrands, randoms[LBG])
+#            LBGIDs = np.append(LBGIDs, haloIDs[LBG])
+#            deletes = np.append(deletes, LBG)
+#            nLBG -= 1
+#
+#
+#
+#    # delete the LBGs that were used in the massive halos
+#    for d in np.sort(deletes)[::-1]:
+#        positions = np.delete(positions, d, 0)  
+#        masses = np.delete(masses, d, 0)  
+#        velocities = np.delete(velocities, d, 0)  
+#        randoms = np.delete(randoms, d, 0)  
+#        haloIDs = np.delete(haloIDs, d, 0)
+        
+        
+
+            
+        
+
+
+
+
     # loop through the full lists and pick out the n with the lowest random numbers
     #  then assign the results 
     for ii in range(nLBG):
-        # pick out the next LBG
-        LBG = np.argmin(randoms[1:LBGcutoff])    
-        LBGpos = np.append(LBGpos, positions[LBG])
-        LBGvels = np.append(LBGvels, velocities[LBG])
-        LBGmass=np.append(LBGmass, masses[LBG])
-        LBGrands = np.append(LBGrands, randoms[LBG])
-        LBGIDs = np.append(LBGIDs, haloIDs[LBG])
-        # remove the taken LBG
-        positions = np.delete(positions, LBG, 0)  
-        masses = np.delete(masses, LBG, 0)  
-        velocities = np.delete(velocities, LBG, 0)  
-        randoms = np.delete(randoms, LBG, 0)  
-        haloIDs = np.delete(haloIDs, LBG, 0)
-       
+        # check if there are enough galaxies left
+        if randoms.shape[0] > 0:
+            # pick out the next LBG
+            LBG = np.argmin(randoms[1:LBGcutoff])    
+            LBGpos = np.append(LBGpos, positions[LBG])
+            LBGvels = np.append(LBGvels, velocities[LBG])
+            LBGmass=np.append(LBGmass, masses[LBG])
+            LBGrands = np.append(LBGrands, randoms[LBG])
+            LBGIDs = np.append(LBGIDs, haloIDs[LBG])
+            # remove the taken LBG
+            positions = np.delete(positions, LBG, 0)  
+            masses = np.delete(masses, LBG, 0)  
+            velocities = np.delete(velocities, LBG, 0)  
+            randoms = np.delete(randoms, LBG, 0)  
+            haloIDs = np.delete(haloIDs, LBG, 0)
+           
 
-        # there are a different number of elements above the cutoff now
-        LBGcutoff -= 1
+            # there are a different number of elements above the cutoff now
+            LBGcutoff -= 1
         
 
     # loop through the LAEs
     for jj in range(nLAE):
-        LAE = np.argmin(randoms[1:]) 
-        # pick out the next LAE
-        LAEpos = np.append(LAEpos, positions[LAE])
-        LAEvels = np.append(LAEvels, velocities[LAE])
-        LAEmass=np.append(LAEmass, masses[LAE])
-        LAErands = np.append(LAErands, randoms[LAE])
-        LAEIDs = np.append(LAEIDs, haloIDs[LAE])
+        # check if there are enough galaxies left
+        if randoms.shape[0] > 0:
+            LAE = np.argmin(randoms[1:]) 
+            # pick out the next LAE
+            LAEpos = np.append(LAEpos, positions[LAE])
+            LAEvels = np.append(LAEvels, velocities[LAE])
+            LAEmass=np.append(LAEmass, masses[LAE])
+            LAErands = np.append(LAErands, randoms[LAE])
+            LAEIDs = np.append(LAEIDs, haloIDs[LAE])
 
-        # remove the taken LAE
-        positions = np.delete(positions, LAE, 0)  
-        masses = np.delete(masses, LAE, 0)  
-        velocities = np.delete(velocities, LAE, 0)  
-        randoms = np.delete(randoms, LAE, 0)  
-        haloIDs = np.delete(haloIDs, LAE, 0)
- 
+            # remove the taken LAE
+            positions = np.delete(positions, LAE, 0)  
+            masses = np.delete(masses, LAE, 0)  
+            velocities = np.delete(velocities, LAE, 0)  
+            randoms = np.delete(randoms, LAE, 0)  
+            haloIDs = np.delete(haloIDs, LAE, 0)
+     
     # reshape arrays
     LBGpos = np.reshape(LBGpos, (-1, 3))
     LBGvels = np.reshape(LBGvels, (-1,3))
     LAEpos = np.reshape(LAEpos, (-1,3))
     LAEvels = np.reshape(LAEvels, (-1, 3))
+
+
+
 
     # these are the final arrays with all of the LAE/LBG galaxies       
     galPos = np.reshape(np.append(LAEpos, LBGpos), (-1, 3))
@@ -759,15 +863,14 @@ def compute_histogram(positions, velocities, masses, vert, randoms, haloIDs, ii)
         # apply the galaxy velocity correction
         z += (vel[0]/3e5)*(1+z)
 
-
-        haloId = str(int(haloId)) 
-        # find the plotting parameters based on the fof group   
-        if groups[haloId] == maxs[0]:
-            firstMassive = np.append(firstMassive, z)
-        elif groups[haloId] == maxs[1]:
-            secondMassive = np.append(secondMassive, z)
-        else:
-            lessMassive = np.append(lessMassive, z)
+#        haloId = str(int(haloId)) 
+#        # find the plotting parameters based on the fof group   
+#        if groups[haloId] == maxs[0]:
+#            firstMassive = np.append(firstMassive, z)
+#        elif groups[haloId] == maxs[1]:
+#            secondMassive = np.append(secondMassive, z)
+#        else:
+#            lessMassive = np.append(lessMassive, z)
 
         zs = np.append(zs, z)
             
@@ -780,7 +883,7 @@ def compute_histogram(positions, velocities, masses, vert, randoms, haloIDs, ii)
         Gauss = twoGauss(x, *fitParam)
         #plt.plot(x, Gauss, linewidth=3)
 #        plt.hist(zs, range=(3.07, 3.09), bins=20)
-        plt.hist([firstMassive, secondMassive, lessMassive], stacked=True, range=(3.05, 3.12), bins=30)
+        plt.hist(zs, range=(3.05, 3.12), bins=30)
 #        plt.ylim([0, 25])
 #        plt.savefig("./halo_movie/"+str(theta)+"_"+str(phi)+".png")
 #        plt.show()
@@ -793,22 +896,35 @@ def compute_histogram(positions, velocities, masses, vert, randoms, haloIDs, ii)
 
 
 # this will calculate the redshift given a comoving distance
+# - input -
+#  d - distance to the object in Mpc
+# - output -
+#  z - the redshift of the object
 def find_redshift(d, OmegaM=0.308, OmegaL=0.692):
+    # this will help measure how long this step of the code will take
     starttime = time.time()
     OmegaK = 1-OmegaM-OmegaL
+    # step to increment the redshift by
     dz = 0.001
+    # initial redshift
     z = 3.05 
+    # initialize the calculated distance to zero
     dCalculated = 0
+    # while the calculated distance is less than the actual distance:
     while (dCalculated<d): 
+        # increment the z that were testing for
         z += dz
+        # create the array of zs for integration
         zarr = np.linspace(0,z, 200)
-        
-#        Ez = lambda z: 1./np.sqrt(OmegaM*(1+z)**3+OmegaK*(1+z)**2+OmegaL)
+       
+        # this is the integrand to get the comoving distance at some redshift 
         Ez = 1./np.sqrt(OmegaM*(1+zarr)**3+OmegaK*(1+zarr)**2+OmegaL)
 
-        
+        # this is the final distance
+        # DH() is the hubble distance 
         dCalculated = cmToMpc*DH()*scipy.integrate.simps(Ez, zarr)
 
+    # when the first step in z reached the required distance, return that value of z
     return z
 
 
@@ -869,8 +985,8 @@ def fcalc(zs):
     if chi1 >= 100 or chi2 >= 100:
         f = 0
 
-    zarr = np.linspace(3.06, 3.09, 100)
-    plt.plot(zarr, twoGauss(zarr, *param1), 'k', linewidth=2)
+    zarr = np.linspace(3.05, 3.12, 200)
+#    plt.plot(zarr, twoGauss(zarr, *param1), 'k', linewidth=2)
     return f, param1, param2
 
 
@@ -905,6 +1021,91 @@ def halo_mass_function(masses, randoms):
     plt.legend(loc='upper right')
 
 
+
+
+# this is the field of influence for finding the column density of galaxies
+def gal_kernel(x, y, x0, y0):
+
+    rsqr = (x-x0)**2+(y-y0)**2
+    return np.exp(-rsqr/10.)
+
+
+
+
+# this will take in the positions that are rotated to the viewing angle
+#  and return the list of indices that are with a fov of LRIS that is 
+#  centered on the highest density region
+def get_fov(positions):
+    
+    # size of the field of view
+    width = 10.45
+    height = 14.44
+
+    # create a plain scatter plot of all of the halos
+    plt.subplot(223)
+    plt.xlim([-30,30])
+    plt.ylim([-30,30])
+    plt.xlabel(r"$H^{-1} \rm \ Mpc$", fontsize=16)
+    plt.ylabel(r"$H^{-1} \rm \ Mpc$", fontsize=16)
+
+  
+    for pos in positions:
+        plt.plot(pos[1], pos[2], 'ko', markersize=3)
+
+
+
+    # create a density map of all of the galaxies
+    Nx = 20
+    Ny = 20
+    x = np.linspace(-30,30, Nx)
+    y = np.linspace(-30,30, Ny)
+    X, Y = np.meshgrid(x, y)
+
+    density = np.zeros((Nx, Ny), dtype='float')
+    
+    for ii in range(Nx):
+        for jj in range(Ny):
+            for pos in positions:
+                density[ii,jj] += gal_kernel(x[ii], y[jj], pos[1], pos[2])
+
+    plt.subplot(224)
+    density = density[::-1,::-1]
+    plt.contourf(X, Y, density, 100, cmap=plt.get_cmap('plasma'))
+    plt.colorbar().set_label("Arbitrary Density", fontsize=16)
+    plt.xlabel(r"$H^{-1} \rm \ Mpc$", fontsize=16)
+    plt.ylabel(r"$H^{-1} \rm \ Mpc$", fontsize=16)
+
+
+    # find the location of the peak density
+    maxDensity = np.unravel_index(density.argmax(), density.shape)    
+    print("maxDensity: {}".format(maxDensity))
+    maxXY = [x[maxDensity[1]], y[maxDensity[0]]]
+    print("maxXY: {}".format(maxXY))
+
+    # the positions that will be returned
+    subPositions = np.array([])
+    for pos in positions:
+        # check if it is in the right x locaiton
+        if (pos[1] < maxXY[0]+width/2.) and (pos[1] > maxXY[0]-width/2.):
+            # check if it is in the right y location
+            if (pos[2] < maxXY[1]+height/2.) and (pos[2] > maxXY[1]-width/2.):
+                subPositions = np.append(subPositions, pos)
+
+
+    # plot the location of the max on the density plot
+    plt.plot(maxXY[0], maxXY[1], 'w^', markersize=6)
+
+
+    # reshape the subPositions array
+    subPositions = np.reshape(subPositions, (-1,3))
+
+    plt.subplot(223)
+    for pos in subPositions:
+        plt.plot(pos[1], pos[2], 'ro', markersize=4)
+
+    
+    np.set_printoptions(precision=2)
+    return subPositions
 
 
 
